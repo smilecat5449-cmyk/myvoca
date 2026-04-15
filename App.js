@@ -1955,9 +1955,11 @@ function AvocadoScreen() {
 //  SETTINGS SCREEN
 // ─────────────────────────────────────────────────────────────────
 function SettingsScreen() {
-  const { T, theme, toggleTheme, words, geminiKey, saveGeminiKey, showToast, sbUser, doLogout } = useApp();
+  const { T, theme, toggleTheme, words, geminiKey, saveGeminiKey, showToast, sbUser, doLogout, profile, updateProfile } = useApp();
   const [keyInput, setKeyInput] = useState(geminiKey);
   const [showKey, setShowKey]   = useState(false);
+  const [showNicknameEdit, setShowNicknameEdit] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState(profile?.nickname || '나의 아보카도');
 
   const exportData = async () => {
     const json = JSON.stringify(words, null, 2);
@@ -2005,6 +2007,62 @@ function SettingsScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+
+      {/* 프로필 */}
+      <SectionLabel label="프로필" />
+      <View style={cardStyle}>
+        <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: T.rule }}>
+          <Text style={{ fontSize: 14, color: T.ink, marginBottom: 8 }}>닉네임</Text>
+          {showNicknameEdit ? (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TextInput
+                style={{
+                  flex: 1, backgroundColor: T.bg, borderRadius: 10, borderWidth: 1,
+                  borderColor: T.rule2, paddingHorizontal: 12, paddingVertical: 10,
+                  fontSize: 13, color: T.ink,
+                }}
+                placeholder="닉네임 입력"
+                placeholderTextColor={T.ink4}
+                value={nicknameInput}
+                onChangeText={setNicknameInput}
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  updateProfile({ nickname: nicknameInput });
+                  setShowNicknameEdit(false);
+                  showToast('✅ 닉네임 저장됨');
+                }}
+                style={{ paddingHorizontal: 14, borderRadius: 10, backgroundColor: T.blue, justifyContent: 'center' }}>
+                <Check size={16} color={T.bg} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setNicknameInput(profile?.nickname || '나의 아보카도');
+                  setShowNicknameEdit(false);
+                }}
+                style={{ paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: T.rule2, justifyContent: 'center' }}>
+                <X size={16} color={T.ink3} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <SettingsRow
+              title={profile?.nickname || '나의 아보카도'}
+              desc="아보카도 이름"
+              right={
+                <TouchableOpacity
+                  onPress={() => setShowNicknameEdit(true)}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+                    borderWidth: 1, borderColor: T.rule2, backgroundColor: T.paper2,
+                  }}>
+                  <Text style={{ fontSize: 12, color: T.ink2 }}>수정</Text>
+                </TouchableOpacity>
+              }
+              last
+            />
+          )}
+        </View>
+      </View>
 
       {/* 계정 */}
       {sbUser && (
