@@ -1793,18 +1793,160 @@ function QuizScreen() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  AVOCADO SCREEN (Placeholder - Phase 6)
+//  AVOCADO SCREEN
 // ─────────────────────────────────────────────────────────────────
 function AvocadoScreen() {
-  const { T } = useApp();
+  const { T, avocado, useCoins, careAvocado, showToast, saveAvocado } = useApp();
+  const [animKey, setAnimKey] = useState(0);
+
+  const caresUntilNextLevel = avocado.level === 1 ? 25 : (avocado.level === 2 ? 50 : 999);
+  const caresNeeded = caresUntilNextLevel - avocado.totalCares;
+  const nextLevelPercent = Math.min((avocado.totalCares / caresUntilNextLevel) * 100, 100);
+
+  // 성장 단계 아이콘
+  const levelIcons = ['🥑', '🌱', '🌿'];
+  const levelEmoji = levelIcons[Math.min(avocado.level - 1, 2)];
+
+  const handleWater = () => {
+    if (useCoins(10)) {
+      careAvocado(1);
+      showToast('🌊 물을 주었어요! (+1 케어)');
+      setAnimKey(k => k + 1);
+    } else {
+      showToast('코인이 부족해요 (필요: 10 🪙)');
+    }
+  };
+
+  const handleNutrient = () => {
+    if (useCoins(20)) {
+      careAvocado(2);
+      showToast('💊 영양제를 주었어요! (+2 케어)');
+      setAnimKey(k => k + 1);
+    } else {
+      showToast('코인이 부족해요 (필요: 20 🪙)');
+    }
+  };
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: T.bg }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ fontSize: 24, fontWeight: '700', color: T.ink, marginBottom: 24, textAlign: 'center' }}>
-        My Avocado 🥑
+      {/* 제목 */}
+      <Text style={{ fontFamily: 'serif', fontSize: 22, fontWeight: '700', color: T.ink, marginBottom: 20, textAlign: 'center' }}>
+        My Avocado
       </Text>
-      <Text style={{ fontSize: 14, color: T.ink2, textAlign: 'center' }}>
-        Avocado screen coming soon in Phase 6!
+
+      {/* 배경 그라데이션 (임시) */}
+      <View style={{
+        backgroundColor: T.greenBg, borderRadius: 20, padding: 40,
+        alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: T.greenBorder,
+        minHeight: 280,
+        justifyContent: 'center',
+      }}>
+        {/* 아보카도 캐릭터 (임시) */}
+        <View key={animKey} style={{
+          width: 140, height: 140, borderRadius: 70, backgroundColor: T.paper,
+          alignItems: 'center', justifyContent: 'center',
+          borderWidth: 3, borderColor: T.green,
+          shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
+        }}>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 64, marginBottom: 8 }}>
+              {levelEmoji}
+            </Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: T.green }}>
+              Lv. {avocado.level}
+            </Text>
+          </View>
+        </View>
+
+        {/* 레벨 진행도 */}
+        <View style={{ marginTop: 20, width: '100%' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={{ fontSize: 12, color: T.ink3, fontWeight: '600' }}>
+              성장 진행도
+            </Text>
+            <Text style={{ fontSize: 12, color: T.green, fontWeight: '600' }}>
+              {avocado.totalCares} / {caresUntilNextLevel}
+            </Text>
+          </View>
+          <View style={{ height: 8, backgroundColor: T.paper2, borderRadius: 4, overflow: 'hidden' }}>
+            <View style={{
+              height: '100%', backgroundColor: T.green, borderRadius: 4,
+              width: `${nextLevelPercent}%`,
+            }} />
+          </View>
+        </View>
+      </View>
+
+      {/* 현재 상태 */}
+      <View style={{
+        backgroundColor: T.paper, borderRadius: 16, padding: 16, marginBottom: 24,
+        borderWidth: 1, borderColor: T.rule2,
+      }}>
+        <Text style={{ fontSize: 13, color: T.ink3, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase' }}>
+          현재 상태
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
+            <Text style={{ fontSize: 24, fontWeight: '700', color: T.blue }}>
+              {avocado.coins}
+            </Text>
+            <Text style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>코인</Text>
+          </View>
+          <View style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
+            <Text style={{ fontSize: 24, fontWeight: '700', color: T.amber }}>
+              {avocado.careThisWeek}
+            </Text>
+            <Text style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>이주 케어</Text>
+          </View>
+          <View style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
+            <Text style={{ fontSize: 24, fontWeight: '700', color: T.green }}>
+              {caresNeeded}
+            </Text>
+            <Text style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>필요한 케어</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 케어 버튼 */}
+      <Text style={{ fontSize: 13, color: T.ink3, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase' }}>
+        아보카도 돌보기
       </Text>
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+        <TouchableOpacity
+          onPress={handleWater}
+          style={{
+            flex: 1, backgroundColor: T.blueBg, borderRadius: 14, padding: 16,
+            alignItems: 'center', borderWidth: 1, borderColor: T.blueBorder,
+          }}>
+          <Text style={{ fontSize: 24, marginBottom: 8 }}>🌊</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: T.blue, marginBottom: 2 }}>물주기</Text>
+          <Text style={{ fontSize: 11, color: T.blue }}>10 🪙</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleNutrient}
+          style={{
+            flex: 1, backgroundColor: T.greenBg, borderRadius: 14, padding: 16,
+            alignItems: 'center', borderWidth: 1, borderColor: T.greenBorder,
+          }}>
+          <Text style={{ fontSize: 24, marginBottom: 8 }}>💊</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: T.green, marginBottom: 2 }}>영양제</Text>
+          <Text style={{ fontSize: 11, color: T.green }}>20 🪙</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 정보 */}
+      <Card>
+        <CardTitle icon={<Sparkles size={15} color={T.blue} />} title="팁" T={T} />
+        <Text style={{ fontSize: 12, color: T.ink2, lineHeight: 18 }}>
+          • 단어 추가: +3 🪙 (하루 최대 3개){'\n'}
+          • 퀴즈 정답: +1 🪙 (하루 최대 10개){'\n'}
+          • 매일 로그인: +10 🪙{'\n'}
+          • 케어 25회 → Lv 2{'\n'}
+          • 케어 50회 → Lv 3
+        </Text>
+      </Card>
     </ScrollView>
   );
 }
