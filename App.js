@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Leaf,
   Layers,
   Moon,
   Pencil,
@@ -122,11 +123,178 @@ const sbClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const AppCtx = createContext(null);
 const useApp = () => useContext(AppCtx);
 
-const STORAGE_KEY   = 'myvocab_v3';
-const THEME_KEY     = 'myvocab_theme';
-const GEMINI_KEY    = 'myvocab_gemini_key';
-const PER_PAGE      = 20;
-const WORD_TYPES    = ['n.', 'v.', 'adj.', 'adv.', 'phr.'];
+const STORAGE_KEY      = 'myvocab_v3';
+const THEME_KEY        = 'myvocab_theme';
+const GEMINI_KEY       = 'myvocab_gemini_key';
+const CATEGORIES_KEY   = 'myvocab_categories';
+const AVOCADO_KEY      = 'myvocab_avocado';
+const DAILY_LOG_KEY    = 'myvocab_daily_log';
+const PROFILE_KEY      = 'myvocab_profile';
+const PER_PAGE         = 20;
+const WORD_TYPES       = ['n.', 'v.', 'adj.', 'adv.', 'phr.'];
+
+// ─────────────────────────────────────────────────────────────────
+//  DEFAULT CATEGORIES (5개 기본 단어장)
+// ─────────────────────────────────────────────────────────────────
+const DEFAULT_CATEGORIES = [
+  {
+    id: 'default_travel',
+    name: '여행 (Travel)',
+    isDefault: true,
+    words: [
+      { word: 'airport', pronunciation: 'ˈeərpɔːrt', type: 'n.', meaning_ko: '공항', meaning_en: 'a place where aircraft depart and arrive', example: 'I arrived at the airport early.' },
+      { word: 'passport', pronunciation: 'ˈpæspɔːrt', type: 'n.', meaning_ko: '여권', meaning_en: 'an official document for traveling internationally', example: 'You need a valid passport to travel abroad.' },
+      { word: 'hotel', pronunciation: 'hoʊˈtel', type: 'n.', meaning_ko: '호텔', meaning_en: 'a place providing lodging and other services', example: 'We stayed at a luxury hotel.' },
+      { word: 'suitcase', pronunciation: 'ˈsuːtkeɪs', type: 'n.', meaning_ko: '캐리어', meaning_en: 'a large bag for carrying clothes while traveling', example: 'I packed my suitcase for the trip.' },
+      { word: 'reserve', pronunciation: 'rɪˈzɜːrv', type: 'v.', meaning_ko: '예약하다', meaning_en: 'to book or save something in advance', example: 'Can you reserve a table for us?' },
+      { word: 'destination', pronunciation: 'ˌdestɪˈneɪʃən', type: 'n.', meaning_ko: '목적지', meaning_en: 'the place where someone is going', example: 'Paris is my favorite destination.' },
+      { word: 'itinerary', pronunciation: 'aɪˈtɪnəreri', type: 'n.', meaning_ko: '일정', meaning_en: 'a planned route or sequence of activities', example: 'We planned a detailed itinerary.' },
+      { word: 'tourism', pronunciation: 'ˈtʊrɪzəm', type: 'n.', meaning_ko: '관광', meaning_en: 'the business of providing services to travelers', example: 'Tourism is a major industry.' },
+      { word: 'scenic', pronunciation: 'ˈsiːnɪk', type: 'adj.', meaning_ko: '풍경이 좋은', meaning_en: 'offering beautiful views', example: 'We took a scenic route.' },
+      { word: 'accommodation', pronunciation: 'əˌkɑːməˈdeɪʃən', type: 'n.', meaning_ko: '숙박', meaning_en: 'a place where someone can live or stay', example: 'The accommodation includes breakfast.' },
+      { word: 'guided tour', pronunciation: 'ˈɡaɪdɪd tʊr', type: 'phr.', meaning_ko: '가이드 투어', meaning_en: 'a tour led by an expert guide', example: 'We took a guided tour of the museum.' },
+      { word: 'customs', pronunciation: 'ˈkʌstəmz', type: 'n.', meaning_ko: '세관', meaning_en: 'the official checking of goods entering a country', example: 'We went through customs at the airport.' },
+      { word: 'currency', pronunciation: 'ˈkɜːrənsi', type: 'n.', meaning_ko: '통화', meaning_en: 'the money used in a particular country', example: 'What is the local currency?' },
+      { word: 'budget', pronunciation: 'ˈbʌdʒɪt', type: 'n.', meaning_ko: '예산', meaning_en: 'the amount of money available to spend', example: 'We had a tight budget for the trip.' },
+      { word: 'souvenir', pronunciation: 'ˌsuːvəˈnɪr', type: 'n.', meaning_ko: '기념품', meaning_en: 'a thing kept as a reminder of a visit', example: 'I bought souvenirs for my family.' },
+      { word: 'explore', pronunciation: 'ɪkˈsplɔːr', type: 'v.', meaning_ko: '탐험하다', meaning_en: 'to travel through or investigate', example: 'We explored the old city.' },
+      { word: 'adventure', pronunciation: 'ədˈventʃər', type: 'n.', meaning_ko: '모험', meaning_en: 'an exciting or unusual experience', example: 'The trip was full of adventure.' },
+      { word: 'flight', pronunciation: 'flaɪt', type: 'n.', meaning_ko: '비행', meaning_en: 'a journey in an aircraft', example: 'The flight was delayed.' },
+      { word: 'baggage', pronunciation: 'ˈbæɡɪdʒ', type: 'n.', meaning_ko: '짐', meaning_en: 'containers and bags with possessions', example: 'Put your baggage in the overhead bin.' },
+    ]
+  },
+  {
+    id: 'default_school',
+    name: '학교 (School)',
+    isDefault: true,
+    words: [
+      { word: 'classroom', pronunciation: 'ˈklæsruːm', type: 'n.', meaning_ko: '교실', meaning_en: 'a room where classes are taught', example: 'The classroom was full of students.' },
+      { word: 'student', pronunciation: 'ˈstuːdənt', type: 'n.', meaning_ko: '학생', meaning_en: 'a person who is learning at a school', example: 'The student asked a question.' },
+      { word: 'teacher', pronunciation: 'ˈtiːtʃər', type: 'n.', meaning_ko: '선생님', meaning_en: 'a person who teaches at a school', example: 'The teacher explained the lesson.' },
+      { word: 'curriculum', pronunciation: 'kəˈrɪkjələm', type: 'n.', meaning_ko: '교육과정', meaning_en: 'the subjects studied in a school', example: 'The curriculum includes math and science.' },
+      { word: 'homework', pronunciation: 'ˈhoʊmwɜːrk', type: 'n.', meaning_ko: '숙제', meaning_en: 'schoolwork to be done outside the classroom', example: 'I finished my homework.' },
+      { word: 'exam', pronunciation: 'ɪɡˈzæm', type: 'n.', meaning_ko: '시험', meaning_en: 'a test of knowledge', example: 'The exam was difficult.' },
+      { word: 'grade', pronunciation: 'ɡreɪd', type: 'n.', meaning_ko: '학년', meaning_en: 'a level or score in school', example: 'She got an A grade.' },
+      { word: 'subject', pronunciation: 'ˈsʌbdʒekt', type: 'n.', meaning_ko: '과목', meaning_en: 'an area of study', example: 'My favorite subject is English.' },
+      { word: 'lecture', pronunciation: 'ˈlektʃər', type: 'n.', meaning_ko: '강의', meaning_en: 'a formal presentation on a topic', example: 'The lecture was informative.' },
+      { word: 'textbook', pronunciation: 'ˈtekstbʊk', type: 'n.', meaning_ko: '교과서', meaning_en: 'a book used for studying a subject', example: 'Open your textbook to page 50.' },
+      { word: 'assignment', pronunciation: 'əˈsaɪnmənt', type: 'n.', meaning_ko: '과제', meaning_en: 'a task given to a student', example: 'Complete the assignment by Friday.' },
+      { word: 'deadline', pronunciation: 'ˈdedlaɪn', type: 'n.', meaning_ko: '마감일', meaning_en: 'the date by which something must be finished', example: 'The deadline is tomorrow.' },
+      { word: 'scholarship', pronunciation: 'ˈskɑːlərʃɪp', type: 'n.', meaning_ko: '장학금', meaning_en: 'financial aid for education', example: 'She won a scholarship.' },
+      { word: 'enroll', pronunciation: 'ɪnˈroʊl', type: 'v.', meaning_ko: '등록하다', meaning_en: 'to register for a course or school', example: 'I enrolled in the class.' },
+      { word: 'graduate', pronunciation: 'ˈɡrædʒuət', type: 'v.', meaning_ko: '졸업하다', meaning_en: 'to complete a course of study', example: 'She graduated last year.' },
+      { word: 'tuition', pronunciation: 'tuˈɪʃən', type: 'n.', meaning_ko: '등록금', meaning_en: 'the fee for instruction', example: 'Tuition is expensive.' },
+      { word: 'campus', pronunciation: 'ˈkæmpəs', type: 'n.', meaning_ko: '캠퍼스', meaning_en: 'the grounds of a school or college', example: 'The campus is beautiful.' },
+      { word: 'dormitory', pronunciation: 'ˈdɔːrmɪtɔːri', type: 'n.', meaning_ko: '기숙사', meaning_en: 'a building where students live', example: 'I live in the dormitory.' },
+      { word: 'library', pronunciation: 'ˈlaɪbreri', type: 'n.', meaning_ko: '도서관', meaning_en: 'a place with books for borrowing', example: 'The library is open until 9 PM.' },
+      { word: 'thesis', pronunciation: 'ˈθiːsɪs', type: 'n.', meaning_ko: '논문', meaning_en: 'a long written work presenting research', example: 'I am writing my thesis.' },
+    ]
+  },
+  {
+    id: 'default_hobby',
+    name: '취미 (Hobby)',
+    isDefault: true,
+    words: [
+      { word: 'hobby', pronunciation: 'ˈhɑːbi', type: 'n.', meaning_ko: '취미', meaning_en: 'an activity done regularly for pleasure', example: 'Reading is my favorite hobby.' },
+      { word: 'sports', pronunciation: 'spɔːrts', type: 'n.', meaning_ko: '스포츠', meaning_en: 'physical activities played for recreation', example: 'I enjoy playing sports.' },
+      { word: 'painting', pronunciation: 'ˈpeɪntɪŋ', type: 'n.', meaning_ko: '그림 그리기', meaning_en: 'creating pictures with paint', example: 'She is talented at painting.' },
+      { word: 'photography', pronunciation: 'fəˈtɑːɡrəfi', type: 'n.', meaning_ko: '사진', meaning_en: 'the art of taking photographs', example: 'Photography is my passion.' },
+      { word: 'music', pronunciation: 'ˈmjuːzɪk', type: 'n.', meaning_ko: '음악', meaning_en: 'organized sounds and silence', example: 'I listen to music every day.' },
+      { word: 'instrument', pronunciation: 'ˈɪnstrəmənt', type: 'n.', meaning_ko: '악기', meaning_en: 'a tool for making music', example: 'I play the guitar.' },
+      { word: 'dancing', pronunciation: 'ˈdænsɪŋ', type: 'n.', meaning_ko: '춤추기', meaning_en: 'moving rhythmically to music', example: 'Dancing is fun.' },
+      { word: 'reading', pronunciation: 'ˈriːdɪŋ', type: 'n.', meaning_ko: '독서', meaning_en: 'the activity of looking at written words', example: 'I enjoy reading novels.' },
+      { word: 'writing', pronunciation: 'ˈraɪtɪŋ', type: 'n.', meaning_ko: '쓰기', meaning_en: 'putting words on paper', example: 'I love creative writing.' },
+      { word: 'cooking', pronunciation: 'ˈkʊkɪŋ', type: 'n.', meaning_ko: '요리', meaning_en: 'preparing food', example: 'I enjoy cooking.' },
+      { word: 'gardening', pronunciation: 'ˈɡɑːrdənɪŋ', type: 'n.', meaning_ko: '정원 가꾸기', meaning_en: 'growing plants and flowers', example: 'Gardening is relaxing.' },
+      { word: 'hiking', pronunciation: 'ˈhaɪkɪŋ', type: 'n.', meaning_ko: '등산', meaning_en: 'walking in nature for recreation', example: 'We went hiking last weekend.' },
+      { word: 'gaming', pronunciation: 'ˈɡeɪmɪŋ', type: 'n.', meaning_ko: '게임하기', meaning_en: 'playing video or board games', example: 'Gaming is a popular hobby.' },
+      { word: 'crafting', pronunciation: 'ˈkræftɪŋ', type: 'n.', meaning_ko: '공예', meaning_en: 'making things by hand', example: 'She enjoys crafting.' },
+      { word: 'collecting', pronunciation: 'kəˈlektɪŋ', type: 'n.', meaning_ko: '수집', meaning_en: 'gathering items of interest', example: 'He is collecting stamps.' },
+      { word: 'swimming', pronunciation: 'ˈswɪmɪŋ', type: 'n.', meaning_ko: '수영', meaning_en: 'moving through water', example: 'Swimming is good exercise.' },
+      { word: 'cycling', pronunciation: 'ˈsaɪklɪŋ', type: 'n.', meaning_ko: '자전거 타기', meaning_en: 'riding a bicycle', example: 'We went cycling.' },
+      { word: 'drawing', pronunciation: 'ˈdrɔːɪŋ', type: 'n.', meaning_ko: '그리기', meaning_en: 'making pictures with pen or pencil', example: 'He is skilled at drawing.' },
+      { word: 'volunteering', pronunciation: 'ˌvɑːlənˈtɪrɪŋ', type: 'n.', meaning_ko: '자원봉사', meaning_en: 'helping others without payment', example: 'Volunteering is rewarding.' },
+      { word: 'meditation', pronunciation: 'ˌmedɪˈteɪʃən', type: 'n.', meaning_ko: '명상', meaning_en: 'calm reflection or contemplation', example: 'I practice meditation daily.' },
+    ]
+  },
+  {
+    id: 'default_business',
+    name: '비즈니스 (Business)',
+    isDefault: true,
+    words: [
+      { word: 'company', pronunciation: 'ˈkʌmpəni', type: 'n.', meaning_ko: '회사', meaning_en: 'a business organization', example: 'She works at a tech company.' },
+      { word: 'employee', pronunciation: 'ɪmˈplɔɪi', type: 'n.', meaning_ko: '직원', meaning_en: 'a person employed by a company', example: 'The employee was promoted.' },
+      { word: 'manager', pronunciation: 'ˈmænɪdʒər', type: 'n.', meaning_ko: '관리자', meaning_en: 'a person in charge of others', example: 'The manager approved the project.' },
+      { word: 'conference', pronunciation: 'ˈkɑːnfərəns', type: 'n.', meaning_ko: '회의', meaning_en: 'a formal meeting of people', example: 'The conference was productive.' },
+      { word: 'presentation', pronunciation: 'ˌprezənˈteɪʃən', type: 'n.', meaning_ko: '프레젠테이션', meaning_en: 'a talk about a topic', example: 'I gave a presentation.' },
+      { word: 'contract', pronunciation: 'ˈkɑːntrækt', type: 'n.', meaning_ko: '계약', meaning_en: 'a legal agreement', example: 'We signed the contract.' },
+      { word: 'profit', pronunciation: 'ˈprɑːfɪt', type: 'n.', meaning_ko: '이익', meaning_en: 'money gained from business', example: 'The profit increased.' },
+      { word: 'revenue', pronunciation: 'ˈrevənuː', type: 'n.', meaning_ko: '수익', meaning_en: 'money earned by a business', example: 'Revenue was up this quarter.' },
+      { word: 'client', pronunciation: 'ˈklaɪənt', type: 'n.', meaning_ko: '고객', meaning_en: 'a person using services', example: 'The client is satisfied.' },
+      { word: 'investment', pronunciation: 'ɪnˈvestmənt', type: 'n.', meaning_ko: '투자', meaning_en: 'money put into something for profit', example: 'This is a good investment.' },
+      { word: 'strategy', pronunciation: 'ˈstrætədʒi', type: 'n.', meaning_ko: '전략', meaning_en: 'a plan of action', example: 'We need a new strategy.' },
+      { word: 'budget', pronunciation: 'ˈbʌdʒɪt', type: 'n.', meaning_ko: '예산', meaning_en: 'an amount of money set aside', example: 'The budget is tight.' },
+      { word: 'deadline', pronunciation: 'ˈdedlaɪn', type: 'n.', meaning_ko: '마감일', meaning_en: 'the date by which work must be done', example: 'The deadline is Friday.' },
+      { word: 'negotiate', pronunciation: 'nɪˈɡoʊʃieɪt', type: 'v.', meaning_ko: '협상하다', meaning_en: 'to discuss and reach an agreement', example: 'We will negotiate the price.' },
+      { word: 'partnership', pronunciation: 'ˈpɑːrtnərʃɪp', type: 'n.', meaning_ko: '파트너십', meaning_en: 'a cooperative venture', example: 'We formed a partnership.' },
+      { word: 'startup', pronunciation: 'ˈstɑːrtʌp', type: 'n.', meaning_ko: '스타트업', meaning_en: 'a new business venture', example: 'I joined a startup.' },
+      { word: 'workflow', pronunciation: 'ˈwɜːrkfloʊ', type: 'n.', meaning_ko: '작업 흐름', meaning_en: 'the sequence of work processes', example: 'The workflow is efficient.' },
+      { word: 'milestone', pronunciation: 'ˈmaɪlstoʊn', type: 'n.', meaning_ko: '이정표', meaning_en: 'a significant event in progress', example: 'This is a major milestone.' },
+      { word: 'quarterly', pronunciation: 'ˈkwɔːrtərli', type: 'adj.', meaning_ko: '분기별의', meaning_en: 'happening four times a year', example: 'The quarterly report is due.' },
+      { word: 'stakeholder', pronunciation: 'ˈsteɪkhoʊldər', type: 'n.', meaning_ko: '이해관계자', meaning_en: 'a person with an interest in something', example: 'Stakeholders must approve this.' },
+    ]
+  },
+  {
+    id: 'default_food',
+    name: '음식 (Food)',
+    isDefault: true,
+    words: [
+      { word: 'restaurant', pronunciation: 'ˈrestrɑːrɑːnt', type: 'n.', meaning_ko: '레스토랑', meaning_en: 'a place to eat meals', example: 'We dined at a nice restaurant.' },
+      { word: 'menu', pronunciation: 'ˈmenjuː', type: 'n.', meaning_ko: '메뉴', meaning_en: 'a list of food available', example: 'What is on the menu?' },
+      { word: 'delicious', pronunciation: 'dɪˈlɪʃəs', type: 'adj.', meaning_ko: '맛있는', meaning_en: 'tasting very good', example: 'The food was delicious.' },
+      { word: 'ingredient', pronunciation: 'ɪnˈɡriːdiənt', type: 'n.', meaning_ko: '재료', meaning_en: 'a component in a recipe', example: 'Add the ingredients to the bowl.' },
+      { word: 'recipe', pronunciation: 'ˈresəpi', type: 'n.', meaning_ko: '레시피', meaning_en: 'instructions for preparing food', example: 'I followed the recipe.' },
+      { word: 'cuisine', pronunciation: 'kwɪˈziːn', type: 'n.', meaning_ko: '요리', meaning_en: 'a style of cooking', example: 'I love Italian cuisine.' },
+      { word: 'appetizer', pronunciation: 'ˈæpɪtaɪzər', type: 'n.', meaning_ko: '애피타이저', meaning_en: 'a light food before the main course', example: 'We ordered an appetizer.' },
+      { word: 'dessert', pronunciation: 'dɪˈzɜːrt', type: 'n.', meaning_ko: '디저트', meaning_en: 'sweet food served after a meal', example: 'I ordered dessert.' },
+      { word: 'beverage', pronunciation: 'ˈbevərɪdʒ', type: 'n.', meaning_ko: '음료', meaning_en: 'a drink', example: 'What beverage would you like?' },
+      { word: 'nutrition', pronunciation: 'nuˈtrɪʃən', type: 'n.', meaning_ko: '영양', meaning_en: 'the science of food and health', example: 'Good nutrition is important.' },
+      { word: 'vitamin', pronunciation: 'ˈvaɪtəmɪn', type: 'n.', meaning_ko: '비타민', meaning_en: 'a nutrient needed for health', example: 'Vitamin C is important.' },
+      { word: 'protein', pronunciation: 'ˈproʊtiːn', type: 'n.', meaning_ko: '단백질', meaning_en: 'a nutrient that builds muscle', example: 'Eggs contain protein.' },
+      { word: 'carbohydrate', pronunciation: 'kɑːrboʊˈhaɪdreɪt', type: 'n.', meaning_ko: '탄수화물', meaning_en: 'a type of nutrient', example: 'Bread has carbohydrates.' },
+      { word: 'fat', pronunciation: 'fæt', type: 'n.', meaning_ko: '지방', meaning_en: 'a nutrient that provides energy', example: 'Nuts contain healthy fat.' },
+      { word: 'vegetarian', pronunciation: 'ˌvedʒɪˈteriən', type: 'adj.', meaning_ko: '채식의', meaning_en: 'eating no meat', example: 'She is vegetarian.' },
+      { word: 'organic', pronunciation: 'ɔːrˈɡænɪk', type: 'adj.', meaning_ko: '유기농의', meaning_en: 'grown without chemicals', example: 'We buy organic food.' },
+      { word: 'flavor', pronunciation: 'ˈfleɪvər', type: 'n.', meaning_ko: '맛', meaning_en: 'the taste of something', example: 'The flavor is excellent.' },
+      { word: 'portion', pronunciation: 'ˈpɔːrʃən', type: 'n.', meaning_ko: '일인분', meaning_en: 'an amount of food for one person', example: 'The portion was large.' },
+      { word: 'seasoning', pronunciation: 'ˈsiːzənɪŋ', type: 'n.', meaning_ko: '양념', meaning_en: 'flavoring added to food', example: 'Add salt as seasoning.' },
+      { word: 'chef', pronunciation: 'ʃef', type: 'n.', meaning_ko: '셰프', meaning_en: 'a professional cook', example: 'The chef prepared the meal.' },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────
+//  INITIAL AVOCADO STATE
+// ─────────────────────────────────────────────────────────────────
+const INITIAL_AVOCADO = {
+  level: 1,
+  totalCares: 0,
+  careThisWeek: 0,
+  coins: 0,
+  skinIndex: 0,
+  backgroundIndex: 0,
+  lastLogin: today(),
+  dailyCoinsFromQuiz: 0,
+  dailyCoinsFromWords: 0,
+};
+
+// ─────────────────────────────────────────────────────────────────
+//  INITIAL PROFILE
+// ─────────────────────────────────────────────────────────────────
+const INITIAL_PROFILE = {
+  nickname: '나의 아보카도',
+  createdAt: today(),
+};
 
 // ─────────────────────────────────────────────────────────────────
 //  HELPERS
@@ -177,16 +345,24 @@ async function generateWords(input, apiKey) {
 //  ROOT PROVIDER
 // ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [theme, setTheme]       = useState('light');
-  const [words, setWords]       = useState([]);
-  const [geminiKey, setGeminiKey] = useState('');
-  const [tab, setTab]           = useState('add');   // add | list | quiz | settings
-  const [toast, setToast]       = useState('');
-  const [sbUser, setSbUser]     = useState(null);    // Supabase user
-  const [authMode, setAuthMode] = useState('login'); // login | signup
-  const [showAuth, setShowAuth] = useState(true);    // Show auth screen
-  const [loading, setLoading]   = useState(true);    // Loading auth state
-  const toastAnim               = useRef(new Animated.Value(0)).current;
+  const [theme, setTheme]           = useState('light');
+  const [words, setWords]           = useState([]);
+  const [geminiKey, setGeminiKey]   = useState('');
+  const [tab, setTab]               = useState('home');   // home | categories | quiz | avocado
+  const [toast, setToast]           = useState('');
+  const [sbUser, setSbUser]         = useState(null);    // Supabase user
+  const [authMode, setAuthMode]     = useState('login'); // login | signup
+  const [showAuth, setShowAuth]     = useState(true);    // Show auth screen
+  const [loading, setLoading]       = useState(true);    // Loading auth state
+
+  // ── NEW: Categories & Avocado ──
+  const [categories, setCategories]           = useState(DEFAULT_CATEGORIES);
+  const [customCategories, setCustomCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('default_travel');
+  const [avocado, setAvocado]                 = useState(INITIAL_AVOCADO);
+  const [profile, setProfile]                 = useState(INITIAL_PROFILE);
+
+  const toastAnim                   = useRef(new Animated.Value(0)).current;
   const T = theme === 'light' ? LIGHT : DARK;
 
   // ── boot ──
@@ -210,13 +386,55 @@ export default function App() {
         console.log('Auth check:', err.message);
       }
 
-      // Load local settings
-      const [th, gk] = await Promise.all([
+      // Load local settings & data
+      const [th, gk, catData, avoData, profData] = await Promise.all([
         AsyncStorage.getItem(THEME_KEY),
         AsyncStorage.getItem(GEMINI_KEY),
+        AsyncStorage.getItem(CATEGORIES_KEY),
+        AsyncStorage.getItem(AVOCADO_KEY),
+        AsyncStorage.getItem(PROFILE_KEY),
       ]);
       if (th)  setTheme(th);
       if (gk)  setGeminiKey(gk);
+
+      // Load categories
+      if (catData) {
+        try {
+          const { defaults, customs } = JSON.parse(catData);
+          setCustomCategories(customs || []);
+        } catch (e) {
+          console.log('Parse categories error:', e.message);
+        }
+      }
+
+      // Load avocado & apply daily bonus
+      if (avoData) {
+        try {
+          const avo = JSON.parse(avoData);
+          const lastLogin = avo.lastLogin || today();
+          const isNewDay = lastLogin !== today();
+          if (isNewDay) {
+            // Daily login bonus: +10 coins, reset daily counters
+            avo.coins += 10;
+            avo.dailyCoinsFromQuiz = 0;
+            avo.dailyCoinsFromWords = 0;
+            avo.lastLogin = today();
+          }
+          setAvocado(avo);
+        } catch (e) {
+          console.log('Parse avocado error:', e.message);
+        }
+      }
+
+      // Load profile
+      if (profData) {
+        try {
+          setProfile(JSON.parse(profData));
+        } catch (e) {
+          console.log('Parse profile error:', e.message);
+        }
+      }
+
       setLoading(false);
     })();
   }, []);
@@ -237,6 +455,81 @@ export default function App() {
     setGeminiKey(k);
     await AsyncStorage.setItem(GEMINI_KEY, k);
   }, []);
+
+  // ── categories ──
+  const saveCategories = useCallback(async (customs) => {
+    setCustomCategories(customs);
+    await AsyncStorage.setItem(CATEGORIES_KEY, JSON.stringify({
+      defaults: DEFAULT_CATEGORIES,
+      customs: customs,
+    }));
+  }, []);
+
+  const addCategory = useCallback((name) => {
+    const newCat = {
+      id: `custom_${uid()}`,
+      name: name,
+      isDefault: false,
+      words: [],
+      createdAt: today(),
+    };
+    const updated = [...customCategories, newCat];
+    saveCategories(updated);
+    return newCat.id;
+  }, [customCategories, saveCategories]);
+
+  const deleteCategory = useCallback((catId) => {
+    const updated = customCategories.filter(c => c.id !== catId);
+    saveCategories(updated);
+  }, [customCategories, saveCategories]);
+
+  const renameCategory = useCallback((catId, newName) => {
+    const updated = customCategories.map(c =>
+      c.id === catId ? { ...c, name: newName } : c
+    );
+    saveCategories(updated);
+  }, [customCategories, saveCategories]);
+
+  // ── avocado ──
+  const saveAvocado = useCallback(async (avo) => {
+    setAvocado(avo);
+    await AsyncStorage.setItem(AVOCADO_KEY, JSON.stringify(avo));
+  }, []);
+
+  const addCoins = useCallback((amount) => {
+    const updated = { ...avocado, coins: avocado.coins + amount };
+    saveAvocado(updated);
+    return updated.coins;
+  }, [avocado, saveAvocado]);
+
+  const useCoins = useCallback((amount) => {
+    if (avocado.coins < amount) return false;
+    const updated = { ...avocado, coins: avocado.coins - amount };
+    saveAvocado(updated);
+    return true;
+  }, [avocado, saveAvocado]);
+
+  const careAvocado = useCallback((careAmount = 1) => {
+    // careAmount: 1 for 물주기 (10 coins), 2 for 영양제 (20 coins)
+    const updated = {
+      ...avocado,
+      totalCares: avocado.totalCares + careAmount,
+      careThisWeek: avocado.careThisWeek + careAmount,
+      level: avocado.totalCares + careAmount >= 50 ? 3 : (avocado.totalCares + careAmount >= 25 ? 2 : 1),
+    };
+    saveAvocado(updated);
+  }, [avocado, saveAvocado]);
+
+  // ── profile ──
+  const saveProfile = useCallback(async (prof) => {
+    setProfile(prof);
+    await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(prof));
+  }, []);
+
+  const updateProfile = useCallback((changes) => {
+    const updated = { ...profile, ...changes };
+    saveProfile(updated);
+  }, [profile, saveProfile]);
 
   // ── auth ──
   const doLogin = useCallback(async (email, pw) => {
@@ -312,6 +605,11 @@ export default function App() {
     T, theme, toggleTheme, words, addWords, deleteWord, toggleMemorized,
     showToast, tab, setTab, geminiKey, saveGeminiKey,
     sbUser, doLogout,
+    // NEW: categories, avocado, profile
+    categories, customCategories, selectedCategory, setSelectedCategory,
+    addCategory, deleteCategory, renameCategory,
+    avocado, addCoins, useCoins, careAvocado,
+    profile, updateProfile,
   };
 
   const toastStyle = {
@@ -332,10 +630,10 @@ export default function App() {
           <>
             <TopBar />
             <View style={{ flex: 1 }}>
-              {tab === 'add'      && <AddScreen />}
-              {tab === 'list'     && <ListScreen />}
-              {tab === 'quiz'     && <QuizScreen />}
-              {tab === 'settings' && <SettingsScreen />}
+              {tab === 'home'       && <AddScreen />}
+              {tab === 'categories' && <ListScreen />}
+              {tab === 'quiz'       && <QuizScreen />}
+              {tab === 'avocado'    && <AvocadoScreen />}
             </View>
             <BottomNav />
           </>
@@ -444,30 +742,49 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
 //  TOP BAR
 // ─────────────────────────────────────────────────────────────────
 function TopBar() {
-  const { T, theme, toggleTheme } = useApp();
+  const { T, theme, toggleTheme, setTab } = useApp();
   return (
     <View style={{
       height: 56, paddingHorizontal: 20, flexDirection: 'row',
       alignItems: 'center', justifyContent: 'space-between',
       backgroundColor: T.navBg, borderBottomWidth: 1, borderBottomColor: T.rule2,
     }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {/* Logo - click to go home */}
+      <TouchableOpacity
+        onPress={() => setTab('home')}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <BookMarked size={20} color={T.blue} strokeWidth={2} />
         <Text style={{ fontFamily: 'serif', fontSize: 20, fontWeight: '700', color: T.ink, letterSpacing: -0.3 }}>
-          My Vocab
+          My Avoca
         </Text>
-      </View>
-      <TouchableOpacity
-        onPress={toggleTheme}
-        style={{
-          width: 36, height: 36, borderRadius: 10, borderWidth: 1,
-          borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
-          backgroundColor: T.paper,
-        }}>
-        {theme === 'dark'
-          ? <Sun size={16} color={T.amber} strokeWidth={2} />
-          : <Moon size={16} color={T.ink3} strokeWidth={2} />}
       </TouchableOpacity>
+
+      {/* Right controls: Profile + Theme */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        {/* Profile button */}
+        <TouchableOpacity
+          onPress={() => setTab('avocado')}
+          style={{
+            width: 36, height: 36, borderRadius: 10, borderWidth: 1,
+            borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
+            backgroundColor: T.paper,
+          }}>
+          <Settings size={16} color={T.ink2} strokeWidth={2} />
+        </TouchableOpacity>
+
+        {/* Theme toggle */}
+        <TouchableOpacity
+          onPress={toggleTheme}
+          style={{
+            width: 36, height: 36, borderRadius: 10, borderWidth: 1,
+            borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
+            backgroundColor: T.paper,
+          }}>
+          {theme === 'dark'
+            ? <Sun size={16} color={T.amber} strokeWidth={2} />
+            : <Moon size={16} color={T.ink3} strokeWidth={2} />}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -478,10 +795,10 @@ function TopBar() {
 function BottomNav() {
   const { T, tab, setTab } = useApp();
   const items = [
-    { key: 'add',      label: '추가',   Icon: Plus },
-    { key: 'list',     label: '단어장', Icon: BookOpen },
-    { key: 'quiz',     label: '퀴즈',   Icon: BrainCircuit },
-    { key: 'settings', label: '설정',   Icon: Settings },
+    { key: 'home',       label: '홈',     Icon: Plus },
+    { key: 'categories', label: '단어장', Icon: Layers },
+    { key: 'quiz',       label: '퀴즈',   Icon: BrainCircuit },
+    { key: 'avocado',    label: '아보카도', Icon: Leaf },
   ];
   return (
     <View style={{
@@ -1282,6 +1599,23 @@ function QuizScreen() {
   );
 
   return null;
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  AVOCADO SCREEN (Placeholder - Phase 6)
+// ─────────────────────────────────────────────────────────────────
+function AvocadoScreen() {
+  const { T } = useApp();
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: T.bg }} contentContainerStyle={{ padding: 16 }}>
+      <Text style={{ fontSize: 24, fontWeight: '700', color: T.ink, marginBottom: 24, textAlign: 'center' }}>
+        My Avocado 🥑
+      </Text>
+      <Text style={{ fontSize: 14, color: T.ink2, textAlign: 'center' }}>
+        Avocado screen coming soon in Phase 6!
+      </Text>
+    </ScrollView>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
