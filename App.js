@@ -10,22 +10,50 @@
  *   npm install @supabase/supabase-js
  */
 
-import { registerRootComponent } from 'expo';
-import React, {
-  useState, useEffect, useRef, useCallback, useMemo, createContext, useContext,
-} from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, FlatList, ScrollView,
-  KeyboardAvoidingView, Platform, Modal, Animated, StatusBar,
-  Alert, Switch, Pressable, Dimensions,
-} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { registerRootComponent } from 'expo';
 import {
-  BookOpen, Plus, Search, X, Check, ChevronDown, ChevronUp, ChevronLeft,
-  ChevronRight, Moon, Sun, Trash2, RotateCcw, Settings, Layers,
-  BrainCircuit, BookMarked, Pencil, Sparkles, TrendingUp, Award,
+  Award,
+  BookMarked,
+  BookOpen,
+  BrainCircuit,
+  Check, ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Layers,
+  Moon,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Settings,
+  Sparkles,
+  Sun, Trash2,
+  X
 } from 'lucide-react-native';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  Alert,
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StatusBar,
+  Switch,
+  Text, TextInput, TouchableOpacity,
+  View
+} from 'react-native';
 
 // ─────────────────────────────────────────────────────────────────
 //  THEME SYSTEM
