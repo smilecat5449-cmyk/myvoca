@@ -20,6 +20,7 @@ import {
   Alert, Switch, Pressable, Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient } from '@supabase/supabase-js';
 import {
   BookOpen, Plus, Search, X, Check, ChevronDown, ChevronUp, ChevronLeft,
   ChevronRight, Moon, Sun, Trash2, RotateCcw, Settings, Layers,
@@ -79,6 +80,13 @@ const DARK = {
   navBg:        'rgba(19,17,16,0.97)',
   shadow:       '#00000040',
 };
+
+// ─────────────────────────────────────────────────────────────────
+//  SUPABASE CONFIG
+// ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://yizaxbgvboaetxyvetxm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpemF4Ymd2Ym9hZXR4eXZldHhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzA1MTksImV4cCI6MjA5MTE0NjUxOX0.lLfuOHPtccWuqSnIhqhOLU2gfv8ElBapJ5dIJ5ePpgw';
+const sbClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─────────────────────────────────────────────────────────────────
 //  CONTEXT
@@ -146,20 +154,42 @@ export default function App() {
   const [geminiKey, setGeminiKey] = useState('');
   const [tab, setTab]           = useState('add');   // add | list | quiz | settings
   const [toast, setToast]       = useState('');
+  const [sbUser, setSbUser]     = useState(null);    // Supabase user
+  const [authMode, setAuthMode] = useState('login'); // login | signup
+  const [showAuth, setShowAuth] = useState(true);    // Show auth screen
+  const [loading, setLoading]   = useState(true);    // Loading auth state
   const toastAnim               = useRef(new Animated.Value(0)).current;
   const T = theme === 'light' ? LIGHT : DARK;
 
   // ── boot ──
   useEffect(() => {
     (async () => {
-      const [raw, th, gk] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEY),
+      try {
+        // Check Supabase session
+        const { data: { session } } = await sbClient.auth.getSession();
+        if (session?.user) {
+          setSbUser(session.user);
+          setShowAuth(false);
+          // Load words from Supabase
+          const { data } = await sbClient.from('words').select('*').eq('user_id', session.user.id);
+          if (data) setWords(data.map(r => ({
+            id: r.id, word: r.word, pronunciation: r.pronunciation,
+            type: r.type, meaning_ko: r.meaning_ko, meaning_en: r.meaning_en,
+            example: r.example, date: r.added_date, memorized: r.memorized
+          })));
+        }
+      } catch (err) {
+        console.log('Auth check:', err.message);
+      }
+
+      // Load local settings
+      const [th, gk] = await Promise.all([
         AsyncStorage.getItem(THEME_KEY),
         AsyncStorage.getItem(GEMINI_KEY),
       ]);
-      if (raw) setWords(JSON.parse(raw));
       if (th)  setTheme(th);
       if (gk)  setGeminiKey(gk);
+      setLoading(false);
     })();
   }, []);
 
@@ -178,6 +208,54 @@ export default function App() {
   const saveGeminiKey = useCallback(async (k) => {
     setGeminiKey(k);
     await AsyncStorage.setItem(GEMINI_KEY, k);
+  }, []);
+
+  // ── auth ──
+  const doLogin = useCallback(async (email, pw) => {
+    try {
+      const { data, error } = await sbClient.auth.signInWithPassword({ email, password: pw });
+      if (error) throw error;
+      setSbUser(data.user);
+      setShowAuth(false);
+      const { data: wdata } = await sbClient.from('words').select('*').eq('user_id', data.user.id);
+      if (wdata) setWords(wdata.map(r => ({
+        id: r.id, word: r.word, pronunciation: r.pronunciation,
+        type: r.type, meaning_ko: r.meaning_ko, meaning_en: r.meaning_en,
+        example: r.example, date: r.added_date, memorized: r.memorized
+      })));
+      showToast('로그인했어요!');
+    } catch (err) {
+      showToast(err.message || '로그인 실패');
+    }
+  }, []);
+
+  const doSignup = useCallback(async (email, pw) => {
+    try {
+      const { data, error } = await sbClient.auth.signUp({ email, password: pw });
+      if (error) throw error;
+      showToast('인증 메일을 보냈어요! 메일을 확인해주세요.');
+      setAuthMode('login');
+    } catch (err) {
+      showToast(err.message || '가입 실패');
+    }
+  }, []);
+
+  const doLogout = useCallback(async () => {
+    try {
+      await sbClient.auth.signOut();
+      setSbUser(null);
+      setShowAuth(true);
+      setWords([]);
+      showToast('로그아웃했어요.');
+    } catch (err) {
+      showToast(err.message || '로그아웃 실패');
+    }
+  }, []);
+
+  const skipAuth = useCallback(() => {
+    setShowAuth(false);
+    setSbUser(null);
+    showToast('로그인 없이 사용해요. (동기화 안됨)');
   }, []);
 
   // ── toast ──
@@ -205,6 +283,7 @@ export default function App() {
   const ctx = {
     T, theme, toggleTheme, words, addWords, deleteWord, toggleMemorized,
     showToast, tab, setTab, geminiKey, saveGeminiKey,
+    sbUser, doLogout,
   };
 
   const toastStyle = {
@@ -219,19 +298,117 @@ export default function App() {
     <AppCtx.Provider value={ctx}>
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={T.navBg} />
       <View style={{ flex: 1, backgroundColor: T.bg }}>
-        <TopBar />
-        <View style={{ flex: 1 }}>
-          {tab === 'add'      && <AddScreen />}
-          {tab === 'list'     && <ListScreen />}
-          {tab === 'quiz'     && <QuizScreen />}
-          {tab === 'settings' && <SettingsScreen />}
-        </View>
-        <BottomNav />
+        {showAuth && !loading ? (
+          <AuthScreen email="" pw="" authMode={authMode} setAuthMode={setAuthMode} doLogin={doLogin} doSignup={doSignup} skipAuth={skipAuth} />
+        ) : (
+          <>
+            <TopBar />
+            <View style={{ flex: 1 }}>
+              {tab === 'add'      && <AddScreen />}
+              {tab === 'list'     && <ListScreen />}
+              {tab === 'quiz'     && <QuizScreen />}
+              {tab === 'settings' && <SettingsScreen />}
+            </View>
+            <BottomNav />
+          </>
+        )}
         <Animated.View style={toastStyle} pointerEvents="none">
           <Text style={{ color: T.bg, fontSize: 13 }}>{toast}</Text>
         </Animated.View>
       </View>
     </AppCtx.Provider>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  AUTH SCREEN
+// ─────────────────────────────────────────────────────────────────
+function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipAuth }) {
+  const { T } = useApp();
+  const [em, setEm] = useState(email);
+  const [p, setP] = useState(pw);
+  const [loading, setLoading] = useState(false);
+
+  const handleAuth = async () => {
+    if (!em.trim() || !p.trim()) { return; }
+    setLoading(true);
+    if (authMode === 'login') {
+      await doLogin(em, p);
+    } else {
+      await doSignup(em, p);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: T.bg }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+      <View style={{ paddingHorizontal: 20, paddingVertical: 40, maxWidth: 400, alignSelf: 'center', width: '100%' }}>
+        <View style={{ marginBottom: 28, alignItems: 'center' }}>
+          <BookMarked size={40} color={T.blue} strokeWidth={2} style={{ marginBottom: 16 }} />
+          <Text style={{ fontFamily: 'serif', fontSize: 28, fontWeight: '700', color: T.ink, marginBottom: 6 }}>
+            My Vocab
+          </Text>
+          <Text style={{ fontSize: 13, color: T.ink3, lineHeight: 20, textAlign: 'center' }}>
+            OPIc · 면접 영어 단어장{'\n'}로그인하면 모든 기기에서 동기화돼요
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', backgroundColor: T.paper2, borderRadius: 10, padding: 3, marginBottom: 20, borderWidth: 1, borderColor: T.rule2 }}>
+          <TouchableOpacity
+            onPress={() => setAuthMode('login')}
+            style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: authMode === 'login' ? T.paper : 'transparent', alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: authMode === 'login' ? '500' : '400', color: authMode === 'login' ? T.ink : T.ink3 }}>로그인</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setAuthMode('signup')}
+            style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: authMode === 'signup' ? T.paper : 'transparent', alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: authMode === 'signup' ? '500' : '400', color: authMode === 'signup' ? T.ink : T.ink3 }}>회원가입</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ backgroundColor: T.paper, borderRadius: 12, borderWidth: 1, borderColor: T.rule2, padding: 20 }}>
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>이메일</Text>
+            <TextInput
+              style={{ backgroundColor: T.bg, borderRadius: 8, borderWidth: 1, borderColor: T.rule2, color: T.ink, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: 'sans-serif' }}
+              placeholder="example@email.com"
+              placeholderTextColor={T.ink4}
+              value={em}
+              onChangeText={setEm}
+              editable={!loading}
+            />
+          </View>
+
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>비밀번호</Text>
+            <TextInput
+              style={{ backgroundColor: T.bg, borderRadius: 8, borderWidth: 1, borderColor: T.rule2, color: T.ink, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: 'sans-serif' }}
+              placeholder={authMode === 'signup' ? '6자 이상' : '비밀번호'}
+              placeholderTextColor={T.ink4}
+              value={p}
+              onChangeText={setP}
+              secureTextEntry
+              editable={!loading}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={handleAuth}
+            disabled={loading}
+            style={{ backgroundColor: T.ink, borderRadius: 8, paddingVertical: 12, alignItems: 'center', opacity: loading ? 0.5 : 1 }}>
+            <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>
+              {loading ? '처리 중...' : (authMode === 'login' ? '로그인' : '가입하기')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ alignItems: 'center', marginTop: 16 }}>
+          <TouchableOpacity onPress={skipAuth}>
+            <Text style={{ fontSize: 12, color: T.ink4 }}>로그인 없이 사용하기</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -1083,7 +1260,7 @@ function QuizScreen() {
 //  SETTINGS SCREEN
 // ─────────────────────────────────────────────────────────────────
 function SettingsScreen() {
-  const { T, theme, toggleTheme, words, geminiKey, saveGeminiKey, showToast } = useApp();
+  const { T, theme, toggleTheme, words, geminiKey, saveGeminiKey, showToast, sbUser, doLogout } = useApp();
   const [keyInput, setKeyInput] = useState(geminiKey);
   const [showKey, setShowKey]   = useState(false);
 
@@ -1133,6 +1310,30 @@ function SettingsScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+
+      {/* 계정 */}
+      {sbUser && (
+        <>
+          <SectionLabel label="계정" />
+          <View style={cardStyle}>
+            <SettingsRow
+              title={sbUser.email}
+              desc="Supabase 동기화 활성화"
+              last
+              right={
+                <TouchableOpacity
+                  onPress={doLogout}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+                    borderWidth: 1, borderColor: T.red, backgroundColor: T.redBg,
+                  }}>
+                  <Text style={{ fontSize: 12, color: T.red, fontWeight: '500' }}>로그아웃</Text>
+                </TouchableOpacity>
+              }
+            />
+          </View>
+        </>
+      )}
 
       {/* AI API */}
       <SectionLabel label="AI API 키" />
