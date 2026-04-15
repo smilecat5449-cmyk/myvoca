@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "myvocab",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -39,7 +39,7 @@
       ]
     ],
     "experiments": {
-      "reactCompiler": true
+      "reactCompiler": false
     }
   }
 }
