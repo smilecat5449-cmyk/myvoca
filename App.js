@@ -1440,26 +1440,42 @@ function PageBtn({ active, disabled, onPress, T, label }) {
 //  QUIZ SCREEN
 // ─────────────────────────────────────────────────────────────────
 function QuizScreen() {
-  const { T, words } = useApp();
+  const { T, words, avocado, addCoins, showToast, categories, customCategories, selectedCategory, setSelectedCategory } = useApp();
   const [view, setView]     = useState('setup');  // setup | session | result
   const [queue, setQueue]   = useState([]);
   const [idx, setIdx]       = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [know, setKnow]     = useState(0);
   const [hard, setHard]     = useState(0);
+  const [earnedCoins, setEarnedCoins] = useState(0);
+  const [onlyMemorized, setOnlyMemorized] = useState(false);  // 암기완료만 필터
   const flipAnim            = useRef(new Animated.Value(0)).current;
 
-  const todoWords = words.filter(w => !w.memorized);
-  const doneWords = words.filter(w => w.memorized);
+  // 모든 카테고리
+  const allCats = useMemo(() => [...categories, ...customCategories], [categories, customCategories]);
+
+  // 선택된 카테고리의 단어들
+  const catWords = useMemo(() => {
+    const cat = allCats.find(c => c.id === selectedCategory);
+    if (!cat) return [];
+    if (cat.words && cat.words.length > 0) {
+      return cat.words;
+    }
+    return words.filter(w => w.category === selectedCategory);
+  }, [selectedCategory, allCats, words]);
+
+  const todoWords = catWords.filter(w => !w.memorized);
+  const doneWords = catWords.filter(w => w.memorized);
 
   const startQuiz = () => {
-    const pool = todoWords.length >= 5 ? todoWords : words;
+    let pool = onlyMemorized ? doneWords : (todoWords.length >= 5 ? todoWords : catWords);
     if (pool.length === 0) {
       Alert.alert('단어 없음', '퀴즈할 단어를 먼저 추가해주세요.');
       return;
     }
     setQueue(shuffle(pool).slice(0, Math.min(pool.length, 20)));
     setIdx(0); setKnow(0); setHard(0); setFlipped(false);
+    setEarnedCoins(0);
     flipAnim.setValue(0);
     setView('session');
   };
@@ -1470,8 +1486,16 @@ function QuizScreen() {
   };
 
   const next = (result) => {
-    if (result === 'know') setKnow(k => k + 1);
-    else setHard(h => h + 1);
+    if (result === 'know') {
+      setKnow(k => k + 1);
+      // 코인 획득: +1 (하루 최대 10개)
+      if (avocado.dailyCoinsFromQuiz < 10) {
+        addCoins(1);
+        setEarnedCoins(c => c + 1);
+      }
+    } else {
+      setHard(h => h + 1);
+    }
     if (idx + 1 >= queue.length) {
       setView('result');
     } else {
@@ -1492,10 +1516,55 @@ function QuizScreen() {
       <Text style={{ fontFamily: 'serif', fontSize: 22, fontWeight: '700', color: T.ink, marginBottom: 16 }}>
         퀴즈
       </Text>
+
+      {/* 카테고리 선택 */}
+      <View style={{ marginBottom: 16 }}>
+        <Text style={{ fontSize: 12, color: T.ink3, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase' }}>
+          카테고리
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {allCats.map(cat => (
+              <TouchableOpacity
+                key={cat.id}
+                onPress={() => setSelectedCategory(cat.id)}
+                style={{
+                  paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: selectedCategory === cat.id ? T.blue : T.rule2,
+                  backgroundColor: selectedCategory === cat.id ? T.blueBg : 'transparent',
+                }}>
+                <Text style={{
+                  fontSize: 12, fontWeight: selectedCategory === cat.id ? '600' : '400',
+                  color: selectedCategory === cat.id ? T.blue : T.ink3,
+                }}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+
+      {/* 필터: 암기완료만 */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        backgroundColor: T.paper, borderRadius: 12, padding: 12, marginBottom: 20,
+        borderWidth: 1, borderColor: T.rule2,
+      }}>
+        <Text style={{ fontSize: 14, color: T.ink }}>암기완료만</Text>
+        <Switch
+          value={onlyMemorized}
+          onValueChange={setOnlyMemorized}
+          trackColor={{ false: T.rule2, true: T.blueBorder }}
+          thumbColor={onlyMemorized ? T.blue : T.ink4}
+        />
+      </View>
+
       {/* Stats */}
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
         {[
-          { label: '전체', num: words.length, color: T.ink },
+          { label: '전체', num: catWords.length, color: T.ink },
           { label: '미암기', num: todoWords.length, color: T.amber },
           { label: '암기완료', num: doneWords.length, color: T.green },
         ].map(({ label, num, color }) => (
@@ -1510,7 +1579,7 @@ function QuizScreen() {
       </View>
 
       {/* Progress ring placeholder */}
-      {words.length > 0 && (
+      {catWords.length > 0 && (
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={{
@@ -1518,7 +1587,7 @@ function QuizScreen() {
               borderColor: T.green, alignItems: 'center', justifyContent: 'center',
             }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: T.green }}>
-                {Math.round((doneWords.length / words.length) * 100)}%
+                {Math.round((doneWords.length / (catWords.length || 1)) * 100)}%
               </Text>
             </View>
             <View style={{ flex: 1 }}>
@@ -1526,11 +1595,11 @@ function QuizScreen() {
               <View style={{ height: 6, backgroundColor: T.paper2, borderRadius: 3, overflow: 'hidden' }}>
                 <View style={{
                   height: '100%', borderRadius: 3, backgroundColor: T.green,
-                  width: `${words.length > 0 ? (doneWords.length / words.length) * 100 : 0}%`,
+                  width: `${catWords.length > 0 ? (doneWords.length / catWords.length) * 100 : 0}%`,
                 }} />
               </View>
               <Text style={{ fontSize: 12, color: T.ink3, marginTop: 4 }}>
-                {doneWords.length} / {words.length} 단어 암기완료
+                {doneWords.length} / {catWords.length} 단어 암기완료
               </Text>
             </View>
           </View>
@@ -1542,6 +1611,7 @@ function QuizScreen() {
         style={{
           backgroundColor: T.ink, borderRadius: 14, paddingVertical: 16,
           alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8,
+          marginTop: 20,
         }}>
         <BrainCircuit size={18} color={T.bg} />
         <Text style={{ color: T.bg, fontSize: 16, fontWeight: '600' }}>퀴즈 시작하기</Text>
@@ -1685,6 +1755,20 @@ function QuizScreen() {
             <Text style={{ fontSize: 11, color: T.ink3, textTransform: 'uppercase', letterSpacing: 0.5 }}>다시볼게요</Text>
           </View>
         </View>
+
+        {/* 코인 획득 표시 */}
+        <View style={{
+          width: '100%', backgroundColor: T.blueBg, borderRadius: 14, padding: 18,
+          alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: T.blueBorder,
+        }}>
+          <Text style={{ fontSize: 14, color: T.blue, fontWeight: '600', marginBottom: 4 }}>
+            이번 퀴즈에서 획득
+          </Text>
+          <Text style={{ fontFamily: 'serif', fontSize: 32, color: T.blue }}>
+            +{earnedCoins} 🪙
+          </Text>
+        </View>
+
         <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
           <TouchableOpacity
             onPress={startQuiz}
