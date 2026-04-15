@@ -1037,17 +1037,33 @@ function AddScreen() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  LIST SCREEN
+//  LIST SCREEN (카테고리 기반)
 // ─────────────────────────────────────────────────────────────────
 function ListScreen() {
-  const { T, words, deleteWord, toggleMemorized, showToast } = useApp();
+  const { T, words, deleteWord, toggleMemorized, showToast, categories, customCategories, selectedCategory, setSelectedCategory, addCategory } = useApp();
   const [search, setSearch]     = useState('');
   const [filter, setFilter]     = useState('all');  // all | todo | done
   const [page, setPage]         = useState(1);
   const [detailWord, setDetail] = useState(null);
+  const [showNewCatModal, setShowNewCatModal] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+
+  // 모든 카테고리 (기본 + 커스텀)
+  const allCats = useMemo(() => [...categories, ...customCategories], [categories, customCategories]);
+
+  // 선택된 카테고리의 단어들
+  const catWords = useMemo(() => {
+    const cat = allCats.find(c => c.id === selectedCategory);
+    if (!cat) return [];
+    // cat.words가 있으면 사용, 아니면 전체 words 중 category 필드로 필터
+    if (cat.words && cat.words.length > 0) {
+      return cat.words;
+    }
+    return words.filter(w => w.category === selectedCategory);
+  }, [selectedCategory, allCats, words]);
 
   const filtered = useMemo(() => {
-    let w = words;
+    let w = catWords;
     if (filter === 'todo') w = w.filter(x => !x.memorized);
     if (filter === 'done') w = w.filter(x => x.memorized);
     if (search.trim()) {
@@ -1058,12 +1074,12 @@ function ListScreen() {
       );
     }
     return [...w].sort((a, b) => a.word.localeCompare(b.word));
-  }, [words, filter, search]);
+  }, [catWords, filter, search]);
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  useEffect(() => { setPage(1); }, [filter, search]);
+  useEffect(() => { setPage(1); }, [filter, search, selectedCategory]);
 
   // 알파벳 그룹
   const groups = useMemo(() => {
@@ -1100,14 +1116,52 @@ function ListScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Controls */}
+      {/* 카테고리 탭 */}
+      <View style={{
+        paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
+        backgroundColor: T.bg,
+        borderBottomWidth: 1, borderBottomColor: T.rule2,
+      }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {allCats.map(cat => (
+              <TouchableOpacity
+                key={cat.id}
+                onPress={() => setSelectedCategory(cat.id)}
+                style={{
+                  paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: selectedCategory === cat.id ? T.blue : T.rule2,
+                  backgroundColor: selectedCategory === cat.id ? T.blueBg : 'transparent',
+                }}>
+                <Text style={{
+                  fontSize: 12, fontWeight: selectedCategory === cat.id ? '600' : '400',
+                  color: selectedCategory === cat.id ? T.blue : T.ink3,
+                }}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => setShowNewCatModal(true)}
+              style={{
+                paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
+                borderWidth: 1, borderColor: T.rule2, borderStyle: 'dashed',
+              }}>
+              <Text style={{ fontSize: 12, color: T.ink3 }}>+ 새 카테고리</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+
+      {/* 필터 & 검색 */}
       <View style={{
         paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
         flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8,
         backgroundColor: T.bg,
       }}>
-        <Text style={{ fontFamily: 'serif', fontSize: 16, fontWeight: '700', color: T.ink, marginRight: 4 }}>
-          단어장 <Text style={{ fontSize: 13, color: T.ink3, fontWeight: '400' }}>({filtered.length})</Text>
+        <Text style={{ fontFamily: 'serif', fontSize: 14, fontWeight: '700', color: T.ink, marginRight: 4 }}>
+          {filtered.length}개
         </Text>
         <FilterPill label="전체" value="all" />
         <FilterPill label="미암기" value="todo" />
@@ -1131,7 +1185,7 @@ function ListScreen() {
         </View>
       </View>
 
-      {/* List */}
+      {/* 단어 목록 */}
       {groups.length === 0 ? (
         <EmptyState T={T} message={search ? '검색 결과가 없어요' : '단어를 추가해보세요'} />
       ) : (
@@ -1174,6 +1228,48 @@ function ListScreen() {
         <WordDetailModal word={detailWord} T={T} onClose={() => setDetail(null)}
           onDelete={() => { handleDelete(detailWord); setDetail(null); }}
           onToggle={() => { if (detailWord) toggleMemorized(detailWord.id); }} />
+      </Modal>
+
+      {/* New Category Modal */}
+      <Modal visible={showNewCatModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 16 }}>
+          <View style={{ backgroundColor: T.paper, borderRadius: 16, padding: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: T.ink, marginBottom: 16 }}>
+              새 카테고리 만들기
+            </Text>
+            <TextInput
+              style={{
+                backgroundColor: T.bg, borderWidth: 1, borderColor: T.rule2,
+                borderRadius: 10, color: T.ink, fontSize: 14, padding: 12,
+                marginBottom: 16,
+              }}
+              placeholder="카테고리 이름"
+              placeholderTextColor={T.ink4}
+              value={newCatName}
+              onChangeText={setNewCatName}
+            />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: T.rule2, borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                onPress={() => { setShowNewCatModal(false); setNewCatName(''); }}>
+                <Text style={{ color: T.ink, fontWeight: '600' }}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: T.blue, borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                onPress={() => {
+                  if (newCatName.trim()) {
+                    const catId = addCategory(newCatName);
+                    setSelectedCategory(catId);
+                    setShowNewCatModal(false);
+                    setNewCatName('');
+                    showToast(`✅ 카테고리 "${newCatName}" 추가됨`);
+                  }
+                }}>
+                <Text style={{ color: T.bg, fontWeight: '600' }}>만들기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
