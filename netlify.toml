@@ -1,6 +1,7 @@
 [build]
-  command = "npx expo export --platform web"
+  command = "npx expo export --platform web --clear"
   publish = "dist"
+  environment = { NODE_ENV = "production" }
 
 [[redirects]]
   from = "/*"
