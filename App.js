@@ -274,6 +274,12 @@ const DEFAULT_CATEGORIES = [
 ];
 
 // ─────────────────────────────────────────────────────────────────
+//  HELPERS (moved before constants)
+// ─────────────────────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const today = () => new Date().toISOString().slice(0, 10);
+
+// ─────────────────────────────────────────────────────────────────
 //  INITIAL AVOCADO STATE
 // ─────────────────────────────────────────────────────────────────
 const INITIAL_AVOCADO = {
@@ -297,10 +303,8 @@ const INITIAL_PROFILE = {
 };
 
 // ─────────────────────────────────────────────────────────────────
-//  HELPERS
+//  MORE HELPERS
 // ─────────────────────────────────────────────────────────────────
-const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-const today = () => new Date().toISOString().slice(0, 10);
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
 // ─────────────────────────────────────────────────────────────────
