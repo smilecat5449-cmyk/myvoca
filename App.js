@@ -33,7 +33,7 @@ import {
   Sparkles,
   Sun, Trash2,
   X
-} from 'lucide-react-native';
+} from 'lucide-react';
 import {
   createContext,
   useCallback,
