@@ -834,10 +834,10 @@ function BottomNav() {
 //  ADD SCREEN
 // ─────────────────────────────────────────────────────────────────
 function AddScreen() {
-  const { T, addWords, showToast, geminiKey, setTab } = useApp();
+  const { T, addWords, showToast, geminiKey, setTab, avocado, addCoins } = useApp();
   const [inputText, setInputText]   = useState('');
   const [loading, setLoading]       = useState(false);
-  const [showManual, setShowManual] = useState(false);
+  const [showAI, setShowAI]         = useState(false);  // AI 섹션 (접힘 상태)
   const [mWord, setMWord]           = useState('');
   const [mPron, setMPron]           = useState('');
   const [mType, setMType]           = useState('n.');
@@ -850,7 +850,7 @@ function AddScreen() {
     if (!inputText.trim()) return;
     if (!geminiKey) {
       Alert.alert('API 키 필요', 'Gemini API 키를 설정에서 입력해주세요.', [
-        { text: '설정으로', onPress: () => setTab('settings') },
+        { text: '설정으로', onPress: () => setTab('avocado') },
         { text: '취소', style: 'cancel' },
       ]);
       return;
@@ -875,7 +875,15 @@ function AddScreen() {
     }
     addWords([{ word: mWord.trim(), pronunciation: mPron.trim(), type: mType, meaning_ko: mMeaningKo.trim(), meaning_en: mMeaningEn.trim(), example: mExample.trim() }]);
     setMWord(''); setMPron(''); setMeaningKo(''); setMeaningEn(''); setMExample('');
-    showToast('✅ 단어 추가됨');
+
+    // 코인 시스템: 하루 3개 제한, 각 3코인
+    if (avocado.dailyCoinsFromWords < 3) {
+      addCoins(3);
+      const remaining = 2 - avocado.dailyCoinsFromWords;
+      showToast(`✅ 단어 추가됨 (+3 🪙, 오늘 ${remaining}개 남음)`);
+    } else {
+      showToast('✅ 단어 추가됨 (코인 획득량 한계 도달)');
+    }
   };
 
   const inputStyle = {
@@ -889,131 +897,134 @@ function AddScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
 
-        {/* ── AI 카드 ── */}
+        {/* ── 수동 추가 카드 (메인) ── */}
         <Card>
-          <CardTitle icon={<Sparkles size={15} color={T.blue} />} title="AI로 단어 추가" T={T} />
-          <TextInput
-            style={[inputStyle, { minHeight: 100, textAlignVertical: 'top' }]}
-            placeholder={'단어 또는 영어 문장을 입력하세요.\n\n예) resilience, eloquent\n예) "I adapt quickly to new environments."'}
-            placeholderTextColor={T.ink4}
-            multiline
-            value={inputText}
-            onChangeText={setInputText}
-          />
-          <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 12, lineHeight: 18 }}>
-            쉼표 구분 단어 목록 또는 영어 문장 붙여넣기 → AI가 자동으로 뜻·예문 생성
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              onPress={handleAiAdd}
-              disabled={loading}
-              style={{
-                flex: 1, backgroundColor: T.ink, borderRadius: 10, paddingVertical: 13,
-                alignItems: 'center', opacity: loading ? 0.5 : 1,
-                flexDirection: 'row', justifyContent: 'center', gap: 6,
-              }}>
-              {loading
-                ? <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>처리 중...</Text>
-                : <>
-                    <Sparkles size={15} color={T.bg} />
-                    <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>AI로 단어 추가하기</Text>
-                  </>
-              }
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setInputText('')}
-              style={{
-                paddingHorizontal: 16, borderRadius: 10, borderWidth: 1,
-                borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
-              }}>
-              <X size={16} color={T.ink3} />
-            </TouchableOpacity>
+          <CardTitle icon={<Pencil size={15} color={T.blue} />} title="수동으로 단어 추가" T={T} />
+
+          <View style={{ gap: 10 }}>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={labelStyle}>단어 *</Text>
+                <TextInput style={inputStyle} placeholder="resilience" placeholderTextColor={T.ink4} value={mWord} onChangeText={setMWord} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={labelStyle}>발음기호</Text>
+                <TextInput style={inputStyle} placeholder="/rɪˈzɪliəns/" placeholderTextColor={T.ink4} value={mPron} onChangeText={setMPron} />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {/* 품사 드롭다운 */}
+              <View style={{ flex: 1 }}>
+                <Text style={labelStyle}>품사</Text>
+                <TouchableOpacity
+                  onPress={() => setTypeOpen(!typeOpen)}
+                  style={[inputStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }]}>
+                  <Text style={{ color: T.ink, fontSize: 14 }}>{mType}</Text>
+                  <ChevronDown size={14} color={T.ink3} />
+                </TouchableOpacity>
+                {typeOpen && (
+                  <View style={{
+                    position: 'absolute', top: 58, left: 0, right: 0, zIndex: 100,
+                    backgroundColor: T.paper, borderWidth: 1, borderColor: T.rule2,
+                    borderRadius: 10, overflow: 'hidden',
+                  }}>
+                    {WORD_TYPES.map(t => (
+                      <TouchableOpacity
+                        key={t}
+                        onPress={() => { setMType(t); setTypeOpen(false); }}
+                        style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: T.rule }}>
+                        <Text style={{ color: t === mType ? T.blue : T.ink, fontSize: 14 }}>{t}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={labelStyle}>한국어 뜻 *</Text>
+                <TextInput style={inputStyle} placeholder="회복력, 탄력성" placeholderTextColor={T.ink4} value={mMeaningKo} onChangeText={setMeaningKo} />
+              </View>
+            </View>
+
+            <View>
+              <Text style={labelStyle}>영어 뜻</Text>
+              <TextInput style={inputStyle} placeholder="the ability to recover quickly" placeholderTextColor={T.ink4} value={mMeaningEn} onChangeText={setMeaningEn} />
+            </View>
+            <View>
+              <Text style={labelStyle}>예문</Text>
+              <TextInput style={inputStyle} placeholder="I've developed resilience through challenges." placeholderTextColor={T.ink4} value={mExample} onChangeText={setMExample} />
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <TouchableOpacity
+                onPress={handleManualAdd}
+                style={{
+                  flex: 1, backgroundColor: T.ink, borderRadius: 10, paddingVertical: 13,
+                  alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+                }}>
+                <Check size={15} color={T.bg} />
+                <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>단어 저장</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setMWord(''); setMPron(''); setMeaningKo(''); setMeaningEn(''); setMExample(''); }}
+                style={{
+                  paddingHorizontal: 16, borderRadius: 10, borderWidth: 1,
+                  borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
+                }}>
+                <RotateCcw size={16} color={T.ink3} />
+              </TouchableOpacity>
+            </View>
           </View>
         </Card>
 
-        {/* ── 수동 추가 카드 ── */}
+        {/* ── AI로 단어 추가 (아코디언) ── */}
         <Card>
           <TouchableOpacity
-            onPress={() => setShowManual(!showManual)}
+            onPress={() => setShowAI(!showAI)}
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <CardTitle icon={<Pencil size={15} color={T.ink3} />} title="수동으로 단어 추가" T={T} noLine />
-            {showManual
+            <CardTitle icon={<Sparkles size={15} color={T.ink3} />} title="AI로 단어 추가" T={T} noLine />
+            {showAI
               ? <ChevronUp size={16} color={T.ink3} />
               : <ChevronDown size={16} color={T.ink3} />}
           </TouchableOpacity>
 
-          {showManual && (
+          {showAI && (
             <View style={{ marginTop: 14, gap: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={labelStyle}>단어 *</Text>
-                  <TextInput style={inputStyle} placeholder="resilience" placeholderTextColor={T.ink4} value={mWord} onChangeText={setMWord} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={labelStyle}>발음기호</Text>
-                  <TextInput style={inputStyle} placeholder="/rɪˈzɪliəns/" placeholderTextColor={T.ink4} value={mPron} onChangeText={setMPron} />
-                </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                {/* 품사 드롭다운 */}
-                <View style={{ flex: 1 }}>
-                  <Text style={labelStyle}>품사</Text>
-                  <TouchableOpacity
-                    onPress={() => setTypeOpen(!typeOpen)}
-                    style={[inputStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }]}>
-                    <Text style={{ color: T.ink, fontSize: 14 }}>{mType}</Text>
-                    <ChevronDown size={14} color={T.ink3} />
-                  </TouchableOpacity>
-                  {typeOpen && (
-                    <View style={{
-                      position: 'absolute', top: 58, left: 0, right: 0, zIndex: 100,
-                      backgroundColor: T.paper, borderWidth: 1, borderColor: T.rule2,
-                      borderRadius: 10, overflow: 'hidden',
-                    }}>
-                      {WORD_TYPES.map(t => (
-                        <TouchableOpacity
-                          key={t}
-                          onPress={() => { setMType(t); setTypeOpen(false); }}
-                          style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: T.rule }}>
-                          <Text style={{ color: t === mType ? T.blue : T.ink, fontSize: 14 }}>{t}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={labelStyle}>한국어 뜻 *</Text>
-                  <TextInput style={inputStyle} placeholder="회복력, 탄력성" placeholderTextColor={T.ink4} value={mMeaningKo} onChangeText={setMeaningKo} />
-                </View>
-              </View>
-
-              <View>
-                <Text style={labelStyle}>영어 뜻</Text>
-                <TextInput style={inputStyle} placeholder="the ability to recover quickly" placeholderTextColor={T.ink4} value={mMeaningEn} onChangeText={setMeaningEn} />
-              </View>
-              <View>
-                <Text style={labelStyle}>예문</Text>
-                <TextInput style={inputStyle} placeholder="I've developed resilience through challenges." placeholderTextColor={T.ink4} value={mExample} onChangeText={setMExample} />
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <TextInput
+                style={[inputStyle, { minHeight: 100, textAlignVertical: 'top' }]}
+                placeholder={'단어 또는 영어 문장을 입력하세요.\n\n예) resilience, eloquent\n예) "I adapt quickly to new environments."'}
+                placeholderTextColor={T.ink4}
+                multiline
+                value={inputText}
+                onChangeText={setInputText}
+              />
+              <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 12, lineHeight: 18 }}>
+                쉼표 구분 단어 목록 또는 영어 문장 붙여넣기 → AI가 자동으로 뜻·예문 생성
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity
-                  onPress={handleManualAdd}
+                  onPress={handleAiAdd}
+                  disabled={loading}
                   style={{
                     flex: 1, backgroundColor: T.ink, borderRadius: 10, paddingVertical: 13,
-                    alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+                    alignItems: 'center', opacity: loading ? 0.5 : 1,
+                    flexDirection: 'row', justifyContent: 'center', gap: 6,
                   }}>
-                  <Check size={15} color={T.bg} />
-                  <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>단어 저장</Text>
+                  {loading
+                    ? <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>처리 중...</Text>
+                    : <>
+                        <Sparkles size={15} color={T.bg} />
+                        <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>AI로 단어 추가하기</Text>
+                      </>
+                  }
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => { setMWord(''); setMPron(''); setMeaningKo(''); setMeaningEn(''); setMExample(''); }}
+                  onPress={() => setInputText('')}
                   style={{
                     paddingHorizontal: 16, borderRadius: 10, borderWidth: 1,
                     borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
                   }}>
-                  <RotateCcw size={16} color={T.ink3} />
+                  <X size={16} color={T.ink3} />
                 </TouchableOpacity>
               </View>
             </View>
