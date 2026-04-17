@@ -13,6 +13,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { registerRootComponent } from 'expo';
+import * as ImagePicker from 'expo-image-picker';
 import {
   Award,
   BookMarked,
@@ -45,6 +46,7 @@ import {
 import {
   Alert,
   Animated,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -349,6 +351,7 @@ const INITIAL_AVOCADO = {
 const INITIAL_PROFILE = {
   nickname: '나의 아보카도',
   photo: '🥑',
+  photoUri: null,   // actual image URI from gallery/camera
   createdAt: today(),
 };
 
@@ -2047,36 +2050,19 @@ function AvocadoScreen() {
           {/* 프로필 섹션 */}
           <View style={{ alignItems: 'center' }}>
             {/* 동그란 프로필 */}
-            <TouchableOpacity
-              onPress={() => {
-                Alert.prompt(
-                  '프로필 사진 선택',
-                  '이모지를 입력하세요',
-                  [
-                    { text: '취소', style: 'cancel' },
-                    {
-                      text: '저장',
-                      onPress: (val) => {
-                        if (val?.trim()) {
-                          updateProfile({ photo: val.trim().charAt(0) });
-                          showToast('프로필 사진이 변경됐어요');
-                        }
-                      },
-                    },
-                  ],
-                  'plain-text',
-                  profile?.photo || '🥑'
-                );
-              }}
-              style={{
-                width: 80, height: 80, borderRadius: 40,
-                backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
-                alignItems: 'center', justifyContent: 'center',
-                marginBottom: 12, shadowColor: T.shadow, shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
-              }}>
-              <Text style={{ fontSize: 40 }}>{profile?.photo || '🥑'}</Text>
-            </TouchableOpacity>
+            <View style={{
+              width: 80, height: 80, borderRadius: 40,
+              backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
+              alignItems: 'center', justifyContent: 'center',
+              marginBottom: 12, shadowColor: T.shadow, shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
+              overflow: 'hidden',
+            }}>
+              {profile?.photoUri
+                ? <Image source={{ uri: profile.photoUri }} style={{ width: 80, height: 80 }} resizeMode="cover" />
+                : <Text style={{ fontSize: 40 }}>{profile?.photo || '🥑'}</Text>
+              }
+            </View>
 
             {/* 닉네임 */}
             <Text style={{ fontSize: 12, color: T.ink3, textAlign: 'center', marginBottom: 16, fontWeight: '600' }}>
@@ -2182,14 +2168,275 @@ function AvocadoScreen() {
 }
 
 // ─────────────────────────────────────────────────────────────────
+//  PROFILE EDIT MODAL
+// ─────────────────────────────────────────────────────────────────
+const EMOJI_PRESETS = ['🥑', '🌿', '🍃', '🌱', '🫐', '🍎', '🐥', '🐻', '🦊', '🐼', '🐨', '🦁', '🌸', '⭐', '🔥', '💎'];
+
+function ProfileEditModal({ visible, onClose }) {
+  const { T, profile, updateProfile, showToast } = useApp();
+  const [nicknameInput, setNicknameInput] = useState(profile?.nickname || '나의 아보카도');
+  const [photoUri, setPhotoUri]           = useState(profile?.photoUri || null);
+  const [emojiInput, setEmojiInput]       = useState(profile?.photo || '🥑');
+  const [tab, setTab]                     = useState('emoji'); // 'emoji' | 'photo'
+
+  // 모달 열릴 때 최신 프로필로 초기화
+  useEffect(() => {
+    if (visible) {
+      setNicknameInput(profile?.nickname || '나의 아보카도');
+      setPhotoUri(profile?.photoUri || null);
+      setEmojiInput(profile?.photo || '🥑');
+      setTab(profile?.photoUri ? 'photo' : 'emoji');
+    }
+  }, [visible]);
+
+  const pickFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: false,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setPhotoUri(result.assets[0].uri);
+      setTab('photo');
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '카메라 접근 권한이 필요합니다.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setPhotoUri(result.assets[0].uri);
+      setTab('photo');
+    }
+  };
+
+  const handleSave = () => {
+    if (!nicknameInput.trim()) {
+      Alert.alert('닉네임을 입력해주세요');
+      return;
+    }
+    updateProfile({
+      nickname: nicknameInput.trim(),
+      photo: emojiInput,
+      photoUri: tab === 'photo' ? photoUri : null,
+    });
+    showToast('프로필이 저장됐어요 ✓');
+    onClose();
+  };
+
+  const avatarSize = 96;
+  const currentAvatar = tab === 'photo' && photoUri;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+        <View style={{
+          backgroundColor: T.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+          paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+        }}>
+          {/* 핸들 */}
+          <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: T.ink4 }} />
+          </View>
+
+          {/* 헤더 */}
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            paddingHorizontal: 20, paddingVertical: 14,
+          }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: T.ink }}>프로필 편집</Text>
+            <TouchableOpacity
+              onPress={onClose}
+              style={{
+                width: 32, height: 32, borderRadius: 10, borderWidth: 1,
+                borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
+              }}>
+              <X size={18} color={T.ink3} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+
+            {/* 아바타 미리보기 */}
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+              <View style={{
+                width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2,
+                backgroundColor: T.brownBg, borderWidth: 3, borderColor: T.warmBrown,
+                alignItems: 'center', justifyContent: 'center',
+                shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
+                overflow: 'hidden',
+              }}>
+                {currentAvatar
+                  ? <Image source={{ uri: photoUri }} style={{ width: avatarSize, height: avatarSize }} resizeMode="cover" />
+                  : <Text style={{ fontSize: 50 }}>{emojiInput}</Text>
+                }
+              </View>
+              <Text style={{ fontSize: 12, color: T.ink3, marginTop: 8 }}>현재 프로필 사진</Text>
+            </View>
+
+            {/* 탭: 이모지 / 사진 */}
+            <View style={{
+              flexDirection: 'row', backgroundColor: T.paper2, borderRadius: 14,
+              padding: 4, marginBottom: 20,
+            }}>
+              {[['emoji', '이모지'], ['photo', '사진']].map(([key, label]) => (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => setTab(key)}
+                  style={{
+                    flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                    backgroundColor: tab === key ? T.paper : 'transparent',
+                    shadowColor: tab === key ? T.shadow : 'transparent',
+                    shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3,
+                    elevation: tab === key ? 1 : 0,
+                  }}>
+                  <Text style={{ fontSize: 13, fontWeight: tab === key ? '600' : '400', color: tab === key ? T.warmBrown : T.ink3 }}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* 이모지 선택 */}
+            {tab === 'emoji' && (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>이모지 선택</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+                  {EMOJI_PRESETS.map((em) => (
+                    <TouchableOpacity
+                      key={em}
+                      onPress={() => setEmojiInput(em)}
+                      style={{
+                        width: 48, height: 48, borderRadius: 14,
+                        backgroundColor: emojiInput === em ? T.brownBg : T.paper2,
+                        borderWidth: 2, borderColor: emojiInput === em ? T.warmBrown : T.rule2,
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                      <Text style={{ fontSize: 24 }}>{em}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 6, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>직접 입력</Text>
+                <TextInput
+                  style={{
+                    backgroundColor: T.paper, borderRadius: 12, borderWidth: 1.5,
+                    borderColor: T.rule2, paddingHorizontal: 14, paddingVertical: 10,
+                    fontSize: 22, color: T.ink, textAlign: 'center', letterSpacing: 4,
+                  }}
+                  placeholder="🥑"
+                  placeholderTextColor={T.ink4}
+                  value={emojiInput}
+                  onChangeText={(v) => setEmojiInput(v.trim() || '🥑')}
+                  maxLength={2}
+                />
+              </View>
+            )}
+
+            {/* 사진 선택 */}
+            {tab === 'photo' && (
+              <View style={{ marginBottom: 20, gap: 10 }}>
+                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 4, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>사진 선택</Text>
+                <TouchableOpacity
+                  onPress={pickFromGallery}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                    backgroundColor: T.paper, borderRadius: 16, padding: 16,
+                    borderWidth: 2, borderColor: T.olive,
+                    shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
+                  }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: T.blueBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 20 }}>🖼️</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: T.ink }}>갤러리에서 선택</Text>
+                    <Text style={{ fontSize: 12, color: T.ink3 }}>사진 라이브러리에서 불러오기</Text>
+                  </View>
+                  <ChevronRight size={16} color={T.ink4} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={takePhoto}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                    backgroundColor: T.paper, borderRadius: 16, padding: 16,
+                    borderWidth: 2, borderColor: T.olive,
+                    shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
+                  }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: T.greenBg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 20 }}>📷</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: T.ink }}>카메라로 촬영</Text>
+                    <Text style={{ fontSize: 12, color: T.ink3 }}>지금 바로 셀카 찍기</Text>
+                  </View>
+                  <ChevronRight size={16} color={T.ink4} />
+                </TouchableOpacity>
+                {photoUri && (
+                  <TouchableOpacity
+                    onPress={() => { setPhotoUri(null); setTab('emoji'); }}
+                    style={{ alignItems: 'center', paddingVertical: 8 }}>
+                    <Text style={{ fontSize: 12, color: T.red }}>사진 제거하고 이모지로 돌아가기</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* 닉네임 */}
+            <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 6, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>닉네임</Text>
+            <TextInput
+              style={{
+                backgroundColor: T.paper, borderRadius: 12, borderWidth: 1.5,
+                borderColor: T.rule2, paddingHorizontal: 14, paddingVertical: 12,
+                fontSize: 15, color: T.ink, marginBottom: 24,
+              }}
+              placeholder="닉네임을 입력하세요"
+              placeholderTextColor={T.ink4}
+              value={nicknameInput}
+              onChangeText={setNicknameInput}
+              maxLength={20}
+            />
+
+            {/* 저장 버튼 */}
+            <TouchableOpacity
+              onPress={handleSave}
+              style={{
+                backgroundColor: T.warmBrown, borderRadius: 16, paddingVertical: 15,
+                alignItems: 'center',
+                shadowColor: T.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 2,
+              }}>
+              <Text style={{ color: T.paper, fontSize: 15, fontWeight: '700' }}>저장하기</Text>
+            </TouchableOpacity>
+
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 //  SETTINGS SCREEN (Modal)
 // ─────────────────────────────────────────────────────────────────
 function SettingsScreen() {
   const { T, theme, toggleTheme, geminiKey, saveGeminiKey, showToast, sbUser, doLogout, profile, updateProfile, setShowSettings } = useApp();
-  const [keyInput, setKeyInput] = useState(geminiKey);
-  const [showKey, setShowKey]   = useState(false);
-  const [showNicknameEdit, setShowNicknameEdit] = useState(false);
-  const [nicknameInput, setNicknameInput] = useState(profile?.nickname || '나의 아보카도');
+  const [keyInput, setKeyInput]       = useState(geminiKey);
+  const [showKey, setShowKey]         = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
 
   const SectionLabel = ({ label }) => (
     <Text style={{
@@ -2250,83 +2497,46 @@ function SettingsScreen() {
           {/* 프로필 */}
           <SectionLabel label="프로필" />
           <View style={cardStyle}>
-            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: T.rule, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <TouchableOpacity
-                onPress={() => {
-                  Alert.prompt(
-                    '프로필 사진 선택',
-                    '이모지를 입력하세요',
-                    [
-                      { text: '취소', style: 'cancel' },
-                      {
-                        text: '저장',
-                        onPress: (val) => {
-                          if (val?.trim()) {
-                            updateProfile({ photo: val.trim().charAt(0) });
-                            showToast('프로필 사진이 변경됐어요');
-                          }
-                        },
-                      },
-                    ],
-                    'plain-text',
-                    profile?.photo || '🥑'
-                  );
-                }}
-                style={{
-                  width: 80, height: 80, borderRadius: 40,
-                  backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
-                  alignItems: 'center', justifyContent: 'center',
-                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
-                }}>
-                <Text style={{ fontSize: 38 }}>{profile?.photo || '🥑'}</Text>
-              </TouchableOpacity>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 4 }}>닉네임</Text>
-                {showNicknameEdit ? (
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <TextInput
-                      style={{
-                        flex: 1, backgroundColor: T.bg, borderRadius: 10, borderWidth: 1,
-                        borderColor: T.rule2, paddingHorizontal: 12, paddingVertical: 8,
-                        fontSize: 13, color: T.ink,
-                      }}
-                      placeholder="닉네임"
-                      value={nicknameInput}
-                      onChangeText={setNicknameInput}
-                      autoFocus
-                    />
-                    <TouchableOpacity
-                      onPress={() => {
-                        updateProfile({ nickname: nicknameInput });
-                        setShowNicknameEdit(false);
-                        showToast('닉네임이 변경됐어요');
-                      }}
-                      style={{
-                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-                        borderWidth: 1, borderColor: T.warmBrown, backgroundColor: T.brownBg,
-                      }}>
-                      <Check size={12} color={T.warmBrown} />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 14, color: T.ink, fontWeight: '600' }}>
-                      {profile?.nickname || '나의 아보카도'}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setShowNicknameEdit(true)}
-                      style={{
-                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-                        borderWidth: 1, borderColor: T.rule2, backgroundColor: T.paper2,
-                      }}>
-                      <Pencil size={12} color={T.ink3} />
-                    </TouchableOpacity>
-                  </View>
-                )}
+            <TouchableOpacity
+              onPress={() => setShowProfileEdit(true)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 14,
+                padding: 16,
+              }}>
+              {/* 아바타 */}
+              <View style={{
+                width: 60, height: 60, borderRadius: 30,
+                backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
+                alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+                shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
+              }}>
+                {profile?.photoUri
+                  ? <Image source={{ uri: profile.photoUri }} style={{ width: 60, height: 60 }} resizeMode="cover" />
+                  : <Text style={{ fontSize: 30 }}>{profile?.photo || '🥑'}</Text>
+                }
               </View>
-            </View>
+              {/* 정보 */}
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: T.ink, marginBottom: 2 }}>
+                  {profile?.nickname || '나의 아보카도'}
+                </Text>
+                <Text style={{ fontSize: 12, color: T.ink3 }}>프로필 사진 · 닉네임 변경</Text>
+              </View>
+              {/* 편집 아이콘 */}
+              <View style={{
+                width: 32, height: 32, borderRadius: 10,
+                backgroundColor: T.paper2, borderWidth: 1, borderColor: T.rule2,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Pencil size={14} color={T.ink3} />
+              </View>
+            </TouchableOpacity>
           </View>
+
+          {/* 프로필 편집 모달 */}
+          <ProfileEditModal visible={showProfileEdit} onClose={() => setShowProfileEdit(false)} />
 
           {/* 계정 */}
           {sbUser && (
