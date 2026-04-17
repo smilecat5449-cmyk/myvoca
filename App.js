@@ -16,14 +16,13 @@ import { registerRootComponent } from 'expo';
 import {
   Award,
   BookMarked,
-  BookOpen,
   BrainCircuit,
   Check, ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  Leaf,
   Layers,
+  Leaf,
   Moon,
   Pencil,
   Plus,
@@ -57,58 +56,108 @@ import {
 } from 'react-native';
 
 // ─────────────────────────────────────────────────────────────────
-//  THEME SYSTEM
+//  THEME SYSTEM — Soft Avocado Ceramic Design
 // ─────────────────────────────────────────────────────────────────
 const LIGHT = {
-  bg:           '#faf8f3',
-  paper:        '#ffffff',
-  paper2:       '#f4f1e8',
-  ink:          '#1e1c18',
-  ink2:         '#4a4640',
-  ink3:         '#9a948a',
-  ink4:         '#ccc7bc',
-  rule:         'rgba(0,0,0,0.06)',
-  rule2:        'rgba(0,0,0,0.12)',
-  blue:         '#2c5f8a',
-  blueBg:       '#eef4f9',
-  blueBorder:   'rgba(44,95,138,0.22)',
-  green:        '#27704a',
-  greenBg:      '#eef6f1',
-  greenBorder:  'rgba(39,112,74,0.22)',
-  red:          '#c0392b',
-  redBg:        '#fdf1f0',
-  redBorder:    'rgba(192,57,43,0.18)',
-  amber:        '#a0621a',
-  amberBg:      '#fdf5e8',
-  amberBorder:  'rgba(160,98,26,0.2)',
-  navBg:        'rgba(250,248,243,0.97)',
-  shadow:       '#00000010',
+  // 배경 및 기본 톤
+  bg:           '#f5f1e8',      // Warm Oatmeal — 부드러운 오트밀
+  paper:        '#faf8f4',      // Soft Cream — 부드러운 크림색
+  paper2:       '#f0ebe2',      // Lighter Oatmeal
+  
+  // 텍스트
+  ink:          '#2d2d2d',      // Dark Charcoal Gray — 진한 차콜
+  ink2:         '#5a5550',      // Warm Gray
+  ink3:         '#8b8680',      // Soft Gray
+  ink4:         '#bbb5ae',      // Light Gray
+  
+  // 선 및 분할선
+  rule:         'rgba(45,45,45,0.06)',   // Very subtle
+  rule2:        'rgba(45,45,45,0.12)',   // Subtle
+  
+  // 아보카도 크림 (메인 강조색)
+  blue:         '#a8bfa3',      // Soft Avocado Green
+  blueBg:       '#e8ede4',      // Soft Avocado BG (lighter)
+  blueBorder:   'rgba(168,191,163,0.3)', // Soft border
+  
+  // 아보카도 껍질 (카드 테두리)
+  olive:        '#7a8566',      // Deep Olive
+  oliveBg:      '#f0f3ed',      // Olive-tinted bg
+  
+  // 따뜻한 브라운 (버튼, 액션)
+  warmBrown:    '#9b8b7e',      // Warm Brown — 아보카도 씨앗색
+  brownBg:      '#ede6dd',      // Warm Brown BG
+  brownBorder:  'rgba(155,139,126,0.3)',
+  
+  // 그린 (완료, 성공)
+  green:        '#9db99b',      // Soft Green
+  greenBg:      '#e8ebe4',      // Soft Green BG
+  greenBorder:  'rgba(157,185,155,0.3)',
+  
+  // 레드 (경고, 위험)
+  red:          '#b8837d',      // Soft Red Brown
+  redBg:        '#f0ebe8',      // Soft Red BG
+  redBorder:    'rgba(184,131,125,0.2)',
+  
+  // 옐로우/앰버 (주의)
+  amber:        '#c9a876',      // Warm Amber
+  amberBg:      '#f5eee5',      // Warm Amber BG
+  amberBorder:  'rgba(201,168,118,0.2)',
+  
+  // 네비게이션
+  navBg:        'rgba(245,241,232,0.97)', // Oatmeal with transparency
+  shadow:       'rgba(45,45,45,0.08)',   // Very subtle shadow
 };
+
 const DARK = {
-  bg:           '#131110',
-  paper:        '#1c1a17',
-  paper2:       '#232018',
-  ink:          '#ede9e0',
-  ink2:         '#c2bcb0',
-  ink3:         '#7a7468',
-  ink4:         '#46423c',
-  rule:         'rgba(255,255,255,0.05)',
-  rule2:        'rgba(255,255,255,0.10)',
-  blue:         '#70aad8',
-  blueBg:       'rgba(112,170,216,0.12)',
-  blueBorder:   'rgba(112,170,216,0.22)',
-  green:        '#5bbf83',
-  greenBg:      'rgba(91,191,131,0.12)',
-  greenBorder:  'rgba(91,191,131,0.22)',
-  red:          '#e07060',
-  redBg:        'rgba(224,112,96,0.12)',
-  redBorder:    'rgba(224,112,96,0.18)',
-  amber:        '#d4944a',
-  amberBg:      'rgba(212,148,74,0.12)',
-  amberBorder:  'rgba(212,148,74,0.2)',
-  navBg:        'rgba(19,17,16,0.97)',
-  shadow:       '#00000040',
+  // 배경 및 기본 톤
+  bg:           '#2a2620',      // Dark Warm Brown
+  paper:        '#3a3530',      // Dark Charcoal
+  paper2:       '#433d36',      // Darker variant
+  
+  // 텍스트
+  ink:          '#f5f1e8',      // Oatmeal text
+  ink2:         '#d9d0c5',      // Light Gray text
+  ink3:         '#a89f96',      // Medium Gray text
+  ink4:         '#7a7370',      // Dark Gray text
+  
+  // 선 및 분할선
+  rule:         'rgba(245,241,232,0.06)',
+  rule2:        'rgba(245,241,232,0.12)',
+  
+  // 아보카도 크림
+  blue:         '#b8cdb3',      // Lighter Avocado for dark mode
+  blueBg:       'rgba(184,205,179,0.15)',
+  blueBorder:   'rgba(184,205,179,0.3)',
+  
+  // 아보카도 껍질
+  olive:        '#9aab94',      // Lighter Olive
+  oliveBg:      'rgba(154,171,148,0.12)',
+  
+  // 따뜻한 브라운
+  warmBrown:    '#b5a499',      // Lighter Warm Brown
+  brownBg:      'rgba(181,164,153,0.12)',
+  brownBorder:  'rgba(181,164,153,0.3)',
+  
+  // 그린
+  green:        '#b5c9b3',      // Lighter Green
+  greenBg:      'rgba(181,201,179,0.12)',
+  greenBorder:  'rgba(181,201,179,0.3)',
+  
+  // 레드
+  red:          '#d4a39c',      // Lighter Red
+  redBg:        'rgba(212,163,156,0.12)',
+  redBorder:    'rgba(212,163,156,0.2)',
+  
+  // 옐로우/앰버
+  amber:        '#d9b896',      // Lighter Amber
+  amberBg:      'rgba(217,184,150,0.12)',
+  amberBorder:  'rgba(217,184,150,0.2)',
+  
+  // 네비게이션
+  navBg:        'rgba(42,38,32,0.97)',
+  shadow:       'rgba(0,0,0,0.25)',
 };
+
 
 // ─────────────────────────────────────────────────────────────────
 //  SUPABASE CONFIG
@@ -299,6 +348,7 @@ const INITIAL_AVOCADO = {
 // ─────────────────────────────────────────────────────────────────
 const INITIAL_PROFILE = {
   nickname: '나의 아보카도',
+  photo: '🥑',
   createdAt: today(),
 };
 
@@ -358,6 +408,7 @@ export default function App() {
   const [authMode, setAuthMode]     = useState('login'); // login | signup
   const [showAuth, setShowAuth]     = useState(true);    // Show auth screen
   const [loading, setLoading]       = useState(true);    // Loading auth state
+  const [showSettings, setShowSettings] = useState(false); // Show settings modal
 
   // ── NEW: Categories & Avocado ──
   const [categories, setCategories]           = useState(DEFAULT_CATEGORIES);
@@ -613,7 +664,7 @@ export default function App() {
     categories, customCategories, selectedCategory, setSelectedCategory,
     addCategory, deleteCategory, renameCategory,
     avocado, addCoins, useCoins, careAvocado,
-    profile, updateProfile,
+    profile, updateProfile, showSettings, setShowSettings,
   };
 
   const toastStyle = {
@@ -645,6 +696,7 @@ export default function App() {
         <Animated.View style={toastStyle} pointerEvents="none">
           <Text style={{ color: T.bg, fontSize: 13 }}>{toast}</Text>
         </Animated.View>
+        {showSettings && <SettingsScreen />}
       </View>
     </AppCtx.Provider>
   );
@@ -674,7 +726,7 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
     <ScrollView style={{ flex: 1, backgroundColor: T.bg }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
       <View style={{ paddingHorizontal: 20, paddingVertical: 40, maxWidth: 400, alignSelf: 'center', width: '100%' }}>
         <View style={{ marginBottom: 28, alignItems: 'center' }}>
-          <BookMarked size={40} color={T.blue} strokeWidth={2} style={{ marginBottom: 16 }} />
+          <BookMarked size={40} color={T.warmBrown} strokeWidth={2} style={{ marginBottom: 16 }} />
           <Text style={{ fontFamily: 'serif', fontSize: 28, fontWeight: '700', color: T.ink, marginBottom: 6 }}>
             My Vocab
           </Text>
@@ -696,11 +748,11 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
           </TouchableOpacity>
         </View>
 
-        <View style={{ backgroundColor: T.paper, borderRadius: 12, borderWidth: 1, borderColor: T.rule2, padding: 20 }}>
+        <View style={{ backgroundColor: T.paper, borderRadius: 20, borderWidth: 2, borderColor: T.olive, padding: 20, shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 }}>
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>이메일</Text>
             <TextInput
-              style={{ backgroundColor: T.bg, borderRadius: 8, borderWidth: 1, borderColor: T.rule2, color: T.ink, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: 'sans-serif' }}
+              style={{ backgroundColor: T.bg, borderRadius: 14, borderWidth: 1, borderColor: T.rule2, color: T.ink, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: 'sans-serif' }}
               placeholder="example@email.com"
               placeholderTextColor={T.ink4}
               value={em}
@@ -709,10 +761,10 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
             />
           </View>
 
-          <View style={{ marginBottom: 12 }}>
+          <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>비밀번호</Text>
             <TextInput
-              style={{ backgroundColor: T.bg, borderRadius: 8, borderWidth: 1, borderColor: T.rule2, color: T.ink, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: 'sans-serif' }}
+              style={{ backgroundColor: T.bg, borderRadius: 14, borderWidth: 1, borderColor: T.rule2, color: T.ink, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, fontFamily: 'sans-serif' }}
               placeholder={authMode === 'signup' ? '6자 이상' : '비밀번호'}
               placeholderTextColor={T.ink4}
               value={p}
@@ -725,16 +777,16 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
           <TouchableOpacity
             onPress={handleAuth}
             disabled={loading}
-            style={{ backgroundColor: T.ink, borderRadius: 8, paddingVertical: 12, alignItems: 'center', opacity: loading ? 0.5 : 1 }}>
-            <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>
+            style={{ backgroundColor: T.warmBrown, borderRadius: 14, paddingVertical: 12, alignItems: 'center', opacity: loading ? 0.5 : 1 }}>
+            <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>
               {loading ? '처리 중...' : (authMode === 'login' ? '로그인' : '가입하기')}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <View style={{ alignItems: 'center', marginTop: 16 }}>
+        <View style={{ alignItems: 'center', marginTop: 20 }}>
           <TouchableOpacity onPress={skipAuth}>
-            <Text style={{ fontSize: 12, color: T.ink4 }}>로그인 없이 사용하기</Text>
+            <Text style={{ fontSize: 12, color: T.ink3 }}>로그인 없이 사용하기</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -746,7 +798,8 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
 //  TOP BAR
 // ─────────────────────────────────────────────────────────────────
 function TopBar() {
-  const { T, theme, toggleTheme, setTab } = useApp();
+  const { T, theme, toggleTheme, setTab, profile, setShowSettings } = useApp();
+  const initial = profile?.nickname?.trim()?.[0]?.toUpperCase() || 'A';
   return (
     <View style={{
       height: 56, paddingHorizontal: 20, flexDirection: 'row',
@@ -757,32 +810,34 @@ function TopBar() {
       <TouchableOpacity
         onPress={() => setTab('home')}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <BookMarked size={20} color={T.blue} strokeWidth={2} />
+        <BookMarked size={20} color={T.warmBrown} strokeWidth={2} />
         <Text style={{ fontFamily: 'serif', fontSize: 20, fontWeight: '700', color: T.ink, letterSpacing: -0.3 }}>
           My Avoca
         </Text>
       </TouchableOpacity>
 
-      {/* Right controls: Profile + Theme */}
+      {/* Right controls: Theme + Settings */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        {/* Profile button */}
+        {/* Settings button */}
         <TouchableOpacity
-          onPress={() => setTab('avocado')}
+          onPress={() => setShowSettings(true)}
           style={{
-            width: 36, height: 36, borderRadius: 10, borderWidth: 1,
+            width: 40, height: 40, borderRadius: 14, borderWidth: 1,
             borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
-            backgroundColor: T.paper,
+            backgroundColor: T.paper, shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
           }}>
-          <Settings size={16} color={T.ink2} strokeWidth={2} />
+          <Settings size={18} color={T.ink3} strokeWidth={2} />
         </TouchableOpacity>
 
         {/* Theme toggle */}
         <TouchableOpacity
           onPress={toggleTheme}
           style={{
-            width: 36, height: 36, borderRadius: 10, borderWidth: 1,
+            width: 40, height: 40, borderRadius: 14, borderWidth: 1,
             borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
-            backgroundColor: T.paper,
+            backgroundColor: T.paper, shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
           }}>
           {theme === 'dark'
             ? <Sun size={16} color={T.amber} strokeWidth={2} />
@@ -819,12 +874,12 @@ function BottomNav() {
             style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
             <Icon
               size={22}
-              color={active ? T.blue : T.ink4}
+              color={active ? T.warmBrown : T.ink4}
               strokeWidth={active ? 2.5 : 1.8}
             />
             <Text style={{
               fontSize: 10,
-              color: active ? T.blue : T.ink4,
+              color: active ? T.warmBrown : T.ink4,
               fontWeight: active ? '600' : '400',
             }}>{label}</Text>
           </TouchableOpacity>
@@ -838,7 +893,7 @@ function BottomNav() {
 //  ADD SCREEN
 // ─────────────────────────────────────────────────────────────────
 function AddScreen() {
-  const { T, addWords, showToast, geminiKey, setTab, avocado, addCoins } = useApp();
+  const { T, addWords, showToast, geminiKey, setTab, setShowSettings, avocado, addCoins } = useApp();
   const [inputText, setInputText]   = useState('');
   const [loading, setLoading]       = useState(false);
   const [showAI, setShowAI]         = useState(false);  // AI 섹션 (접힘 상태)
@@ -854,7 +909,7 @@ function AddScreen() {
     if (!inputText.trim()) return;
     if (!geminiKey) {
       Alert.alert('API 키 필요', 'Gemini API 키를 설정에서 입력해주세요.', [
-        { text: '설정으로', onPress: () => setTab('avocado') },
+        { text: '설정으로', onPress: () => setShowSettings(true) },
         { text: '취소', style: 'cancel' },
       ]);
       return;
@@ -938,7 +993,7 @@ function AddScreen() {
                         key={t}
                         onPress={() => { setMType(t); setTypeOpen(false); }}
                         style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: T.rule }}>
-                        <Text style={{ color: t === mType ? T.blue : T.ink, fontSize: 14 }}>{t}</Text>
+                        <Text style={{ color: t === mType ? T.warmBrown : T.ink, fontSize: 14, fontWeight: t === mType ? '600' : '400' }}>{t}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -963,11 +1018,12 @@ function AddScreen() {
               <TouchableOpacity
                 onPress={handleManualAdd}
                 style={{
-                  flex: 1, backgroundColor: T.ink, borderRadius: 10, paddingVertical: 13,
+                  flex: 1, backgroundColor: T.warmBrown, borderRadius: 12, paddingVertical: 13,
                   alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
                 }}>
-                <Check size={15} color={T.bg} />
-                <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>단어 저장</Text>
+                <Check size={15} color={T.paper} />
+                <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>단어 저장</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => { setMWord(''); setMPron(''); setMeaningKo(''); setMeaningEn(''); setMExample(''); }}
@@ -1010,23 +1066,25 @@ function AddScreen() {
                   onPress={handleAiAdd}
                   disabled={loading}
                   style={{
-                    flex: 1, backgroundColor: T.ink, borderRadius: 10, paddingVertical: 13,
+                    flex: 1, backgroundColor: T.warmBrown, borderRadius: 14, paddingVertical: 13,
                     alignItems: 'center', opacity: loading ? 0.5 : 1,
                     flexDirection: 'row', justifyContent: 'center', gap: 6,
+                    shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
                   }}>
                   {loading
-                    ? <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>처리 중...</Text>
+                    ? <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>처리 중...</Text>
                     : <>
-                        <Sparkles size={15} color={T.bg} />
-                        <Text style={{ color: T.bg, fontSize: 14, fontWeight: '500' }}>AI로 단어 추가하기</Text>
+                        <Sparkles size={15} color={T.paper} />
+                        <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>AI로 단어 추가하기</Text>
                       </>
                   }
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setInputText('')}
                   style={{
-                    paddingHorizontal: 16, borderRadius: 10, borderWidth: 1,
+                    paddingHorizontal: 16, borderRadius: 12, borderWidth: 1,
                     borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: T.paper, shadowColor: T.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
                   }}>
                   <X size={16} color={T.ink3} />
                 </TouchableOpacity>
@@ -1108,11 +1166,11 @@ function ListScreen() {
       onPress={() => setFilter(value)}
       style={{
         paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
-        borderWidth: 1,
-        borderColor: filter === value ? T.blue : T.rule2,
-        backgroundColor: filter === value ? T.blueBg : 'transparent',
+        borderWidth: filter === value ? 2 : 1,
+        borderColor: filter === value ? T.warmBrown : T.rule2,
+        backgroundColor: filter === value ? T.brownBg : 'transparent',
       }}>
-      <Text style={{ fontSize: 12, color: filter === value ? T.blue : T.ink3, fontWeight: filter === value ? '600' : '400' }}>
+      <Text style={{ fontSize: 12, color: filter === value ? T.warmBrown : T.ink3, fontWeight: filter === value ? '600' : '400' }}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -1134,13 +1192,13 @@ function ListScreen() {
                 onPress={() => setSelectedCategory(cat.id)}
                 style={{
                   paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: selectedCategory === cat.id ? T.blue : T.rule2,
-                  backgroundColor: selectedCategory === cat.id ? T.blueBg : 'transparent',
+                  borderWidth: selectedCategory === cat.id ? 2 : 1,
+                  borderColor: selectedCategory === cat.id ? T.warmBrown : T.rule2,
+                  backgroundColor: selectedCategory === cat.id ? T.brownBg : 'transparent',
                 }}>
                 <Text style={{
                   fontSize: 12, fontWeight: selectedCategory === cat.id ? '600' : '400',
-                  color: selectedCategory === cat.id ? T.blue : T.ink3,
+                  color: selectedCategory === cat.id ? T.warmBrown : T.ink3,
                 }}>
                   {cat.name}
                 </Text>
@@ -1237,14 +1295,14 @@ function ListScreen() {
       {/* New Category Modal */}
       <Modal visible={showNewCatModal} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', paddingHorizontal: 16 }}>
-          <View style={{ backgroundColor: T.paper, borderRadius: 16, padding: 20 }}>
+          <View style={{ backgroundColor: T.paper, borderRadius: 20, borderWidth: 2, borderColor: T.olive, padding: 20, shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 5 }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: T.ink, marginBottom: 16 }}>
               새 카테고리 만들기
             </Text>
             <TextInput
               style={{
                 backgroundColor: T.bg, borderWidth: 1, borderColor: T.rule2,
-                borderRadius: 10, color: T.ink, fontSize: 14, padding: 12,
+                borderRadius: 14, color: T.ink, fontSize: 14, padding: 12,
                 marginBottom: 16,
               }}
               placeholder="카테고리 이름"
@@ -1254,12 +1312,12 @@ function ListScreen() {
             />
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
-                style={{ flex: 1, backgroundColor: T.rule2, borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: T.paper2, borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: T.rule2 }}
                 onPress={() => { setShowNewCatModal(false); setNewCatName(''); }}>
                 <Text style={{ color: T.ink, fontWeight: '600' }}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flex: 1, backgroundColor: T.blue, borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: T.warmBrown, borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
                 onPress={() => {
                   if (newCatName.trim()) {
                     const catId = addCategory(newCatName);
@@ -1269,7 +1327,7 @@ function ListScreen() {
                     showToast(`✅ 카테고리 "${newCatName}" 추가됨`);
                   }
                 }}>
-                <Text style={{ color: T.bg, fontWeight: '600' }}>만들기</Text>
+                <Text style={{ color: T.paper, fontWeight: '600' }}>만들기</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1281,10 +1339,10 @@ function ListScreen() {
 
 function WordEntry({ word: w, isFirst, isLast, isOnly, T, onToggle, onDelete, onPress }) {
   const radius = {
-    borderTopLeftRadius:    (isFirst || isOnly) ? 12 : 0,
-    borderTopRightRadius:   (isFirst || isOnly) ? 12 : 0,
-    borderBottomLeftRadius: (isLast  || isOnly) ? 12 : 0,
-    borderBottomRightRadius:(isLast  || isOnly) ? 12 : 0,
+    borderTopLeftRadius:    (isFirst || isOnly) ? 18 : 0,
+    borderTopRightRadius:   (isFirst || isOnly) ? 18 : 0,
+    borderBottomLeftRadius: (isLast  || isOnly) ? 18 : 0,
+    borderBottomRightRadius:(isLast  || isOnly) ? 18 : 0,
   };
   return (
     <TouchableOpacity
@@ -1333,10 +1391,10 @@ function WordEntry({ word: w, isFirst, isLast, isOnly, T, onToggle, onDelete, on
         {w.type ? (
           <View style={{
             alignSelf: 'flex-start', marginVertical: 4,
-            backgroundColor: T.blueBg, borderWidth: 1, borderColor: T.blueBorder,
-            borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2,
+            backgroundColor: T.brownBg, borderWidth: 1, borderColor: T.brownBorder,
+            borderRadius: 16, paddingHorizontal: 10, paddingVertical: 3,
           }}>
-            <Text style={{ fontFamily: 'monospace', fontSize: 10, color: T.blue }}>{w.type}</Text>
+            <Text style={{ fontFamily: 'monospace', fontSize: 10, color: T.warmBrown, fontWeight: '600' }}>{w.type}</Text>
           </View>
         ) : null}
         <Text style={{ fontSize: 14, color: T.ink2, lineHeight: 20 }}>{w.meaning_ko}</Text>
@@ -1427,14 +1485,14 @@ function PageBtn({ active, disabled, onPress, T, label }) {
       disabled={disabled}
       onPress={onPress}
       style={{
-        minWidth: 34, height: 34, borderRadius: 8, borderWidth: 1,
-        borderColor: active ? T.ink : T.rule2,
-        backgroundColor: active ? T.ink : T.paper,
+        minWidth: 34, height: 34, borderRadius: 8, borderWidth: active ? 2 : 1,
+        borderColor: active ? T.warmBrown : T.rule2,
+        backgroundColor: active ? T.brownBg : T.paper,
         alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8,
         opacity: disabled ? 0.3 : 1,
       }}>
       {typeof label === 'string'
-        ? <Text style={{ fontSize: 13, color: active ? T.bg : T.ink2, fontFamily: 'monospace' }}>{label}</Text>
+        ? <Text style={{ fontSize: 13, color: active ? T.warmBrown : T.ink2, fontFamily: 'monospace', fontWeight: active ? '600' : '400' }}>{label}</Text>
         : label}
     </TouchableOpacity>
   );
@@ -1613,12 +1671,12 @@ function QuizScreen() {
       <TouchableOpacity
         onPress={startQuiz}
         style={{
-          backgroundColor: T.ink, borderRadius: 14, paddingVertical: 16,
+          backgroundColor: T.warmBrown, borderRadius: 16, paddingVertical: 16,
           alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8,
-          marginTop: 20,
+          marginTop: 20, shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
         }}>
-        <BrainCircuit size={18} color={T.bg} />
-        <Text style={{ color: T.bg, fontSize: 16, fontWeight: '600' }}>퀴즈 시작하기</Text>
+        <BrainCircuit size={18} color={T.paper} />
+        <Text style={{ color: T.paper, fontSize: 16, fontWeight: '600' }}>퀴즈 시작하기</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -1628,27 +1686,27 @@ function QuizScreen() {
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       {/* Progress */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <View style={{ flex: 1, height: 4, backgroundColor: T.paper2, borderRadius: 2, overflow: 'hidden' }}>
-          <View style={{ width: `${prog * 100}%`, height: '100%', backgroundColor: T.blue, borderRadius: 2 }} />
+        <View style={{ flex: 1, height: 6, backgroundColor: T.paper2, borderRadius: 3, overflow: 'hidden' }}>
+          <View style={{ width: `${prog * 100}%`, height: '100%', backgroundColor: T.warmBrown, borderRadius: 3 }} />
         </View>
         <Text style={{ fontFamily: 'monospace', fontSize: 12, color: T.ink3 }}>{idx + 1}/{queue.length}</Text>
       </View>
 
       {/* Flash Card */}
       <View style={{
-        backgroundColor: T.paper, borderRadius: 20, padding: 28,
-        minHeight: 240, borderWidth: 1, borderColor: T.rule2, marginBottom: 14,
-        shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 12,
-        elevation: 4, justifyContent: 'space-between',
+        backgroundColor: T.paper, borderRadius: 24, padding: 28,
+        minHeight: 240, borderWidth: 2, borderColor: T.olive, marginBottom: 14,
+        shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8,
+        elevation: 2, justifyContent: 'space-between',
       }}>
         {/* Type badge */}
         {current.type ? (
           <View style={{
-            alignSelf: 'flex-start', backgroundColor: T.blueBg,
-            borderWidth: 1, borderColor: T.blueBorder, borderRadius: 20,
-            paddingHorizontal: 10, paddingVertical: 3,
+            alignSelf: 'flex-start', backgroundColor: T.brownBg,
+            borderWidth: 1, borderColor: T.brownBorder, borderRadius: 16,
+            paddingHorizontal: 10, paddingVertical: 4,
           }}>
-            <Text style={{ fontFamily: 'monospace', fontSize: 10, color: T.blue, letterSpacing: 0.5 }}>{current.type}</Text>
+            <Text style={{ fontFamily: 'monospace', fontSize: 10, color: T.warmBrown, letterSpacing: 0.5, fontWeight: '600' }}>{current.type}</Text>
           </View>
         ) : <View />}
 
@@ -1699,10 +1757,10 @@ function QuizScreen() {
         <TouchableOpacity
           onPress={flip}
           style={{
-            backgroundColor: T.blueBg, borderWidth: 1, borderColor: T.blueBorder,
-            borderRadius: 14, paddingVertical: 16, alignItems: 'center',
+            backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
+            borderRadius: 14, paddingVertical: 16, alignItems: 'center', shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
           }}>
-          <Text style={{ fontSize: 16, color: T.blue, fontWeight: '600' }}>뜻 확인하기</Text>
+          <Text style={{ fontSize: 16, color: T.warmBrown, fontWeight: '600' }}>뜻 확인하기</Text>
         </TouchableOpacity>
       ) : (
         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -1710,7 +1768,7 @@ function QuizScreen() {
             onPress={() => next('know')}
             style={{
               flex: 1, backgroundColor: T.greenBg, borderWidth: 1, borderColor: T.greenBorder,
-              borderRadius: 14, paddingVertical: 16, alignItems: 'center',
+              borderRadius: 14, paddingVertical: 16, alignItems: 'center', shadowColor: T.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
             }}>
             <Text style={{ fontSize: 15, color: T.green, fontWeight: '600' }}>✓ 알았어요</Text>
           </TouchableOpacity>
@@ -1718,7 +1776,7 @@ function QuizScreen() {
             onPress={() => next('hard')}
             style={{
               flex: 1, backgroundColor: T.amberBg, borderWidth: 1, borderColor: T.amberBorder,
-              borderRadius: 14, paddingVertical: 16, alignItems: 'center',
+              borderRadius: 14, paddingVertical: 16, alignItems: 'center', shadowColor: T.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
             }}>
             <Text style={{ fontSize: 15, color: T.amber, fontWeight: '600' }}>↺ 다시볼게요</Text>
           </TouchableOpacity>
@@ -1735,10 +1793,10 @@ function QuizScreen() {
   if (view === 'result') return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <View style={{
-        backgroundColor: T.paper, borderRadius: 20, padding: 36,
-        alignItems: 'center', borderWidth: 1, borderColor: T.rule2,
-        shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 12,
-        elevation: 4,
+        backgroundColor: T.paper, borderRadius: 24, padding: 36,
+        alignItems: 'center', borderWidth: 2, borderColor: T.olive,
+        shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8,
+        elevation: 2,
       }}>
         <Award size={48} color={T.amber} strokeWidth={1.5} style={{ marginBottom: 16 }} />
         <Text style={{ fontFamily: 'serif', fontSize: 28, fontWeight: '700', color: T.ink, marginBottom: 6 }}>완료!</Text>
@@ -1762,13 +1820,13 @@ function QuizScreen() {
 
         {/* 코인 획득 표시 */}
         <View style={{
-          width: '100%', backgroundColor: T.blueBg, borderRadius: 14, padding: 18,
-          alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: T.blueBorder,
+          width: '100%', backgroundColor: T.blueBg, borderRadius: 16, padding: 18,
+          alignItems: 'center', marginBottom: 24, borderWidth: 2, borderColor: T.blue,
         }}>
-          <Text style={{ fontSize: 14, color: T.blue, fontWeight: '600', marginBottom: 4 }}>
+          <Text style={{ fontSize: 14, color: T.ink3, fontWeight: '500', marginBottom: 4 }}>
             이번 퀴즈에서 획득
           </Text>
-          <Text style={{ fontFamily: 'serif', fontSize: 32, color: T.blue }}>
+          <Text style={{ fontFamily: 'serif', fontSize: 32, color: T.warmBrown, fontWeight: '700' }}>
             +{earnedCoins} 🪙
           </Text>
         </View>
@@ -1777,16 +1835,18 @@ function QuizScreen() {
           <TouchableOpacity
             onPress={startQuiz}
             style={{
-              flex: 1, backgroundColor: T.ink, borderRadius: 12, paddingVertical: 14, alignItems: 'center',
+              flex: 1, backgroundColor: T.warmBrown, borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+              shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
             }}>
-            <Text style={{ color: T.bg, fontSize: 15, fontWeight: '600' }}>다시 퀴즈</Text>
+            <Text style={{ color: T.paper, fontSize: 15, fontWeight: '600' }}>다시 퀴즈</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={endQuiz}
             style={{
-              flex: 1, borderWidth: 1, borderColor: T.rule2, borderRadius: 12, paddingVertical: 14, alignItems: 'center',
+              flex: 1, borderWidth: 1, borderColor: T.rule2, borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+              backgroundColor: T.paper, shadowColor: T.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
             }}>
-            <Text style={{ color: T.ink2, fontSize: 15 }}>단어장으로</Text>
+            <Text style={{ color: T.ink2, fontSize: 15, fontWeight: '500' }}>단어장으로</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1800,417 +1860,589 @@ function QuizScreen() {
 //  AVOCADO SCREEN
 // ─────────────────────────────────────────────────────────────────
 function AvocadoScreen() {
-  const { T, avocado, useCoins, careAvocado, showToast, saveAvocado } = useApp();
-  const [animKey, setAnimKey] = useState(0);
+  const { T, avocado, useCoins, careAvocado, showToast, profile } = useApp();
+  const [viewMode, setViewMode] = useState('home');
+  const [storeTab, setStoreTab] = useState('캐릭터');
+  const [ownedItems, setOwnedItems] = useState(['char1', 'room1', 'building1']);
+  const [equipped, setEquipped] = useState({ 캐릭터: 'char1', 방: 'room1', 건물: 'building1' });
+  const [search, setSearch] = useState('');
+  const [discountOnly, setDiscountOnly] = useState(false);
 
   const caresUntilNextLevel = avocado.level === 1 ? 25 : (avocado.level === 2 ? 50 : 999);
-  const caresNeeded = caresUntilNextLevel - avocado.totalCares;
+  const caresNeeded = Math.max(caresUntilNextLevel - avocado.totalCares, 0);
   const nextLevelPercent = Math.min((avocado.totalCares / caresUntilNextLevel) * 100, 100);
 
-  // 성장 단계 아이콘
-  const levelIcons = ['🥑', '🌱', '🌿'];
-  const levelEmoji = levelIcons[Math.min(avocado.level - 1, 2)];
-
-  const handleWater = () => {
-    if (useCoins(10)) {
-      careAvocado(1);
-      showToast('🌊 물을 주었어요! (+1 케어)');
-      setAnimKey(k => k + 1);
-    } else {
-      showToast('코인이 부족해요 (필요: 10 🪙)');
-    }
+  const storeTabs = ['캐릭터', '방', '건물'];
+  const storeItems = {
+    캐릭터: [
+      { id: 'char1', title: '기본 캐릭터', price: 0, coin: '코인', desc: '따뜻한 기본 아보카도', badge: '기본' },
+      { id: 'char2', title: '눈멍이', price: 120, coin: '🪙', desc: '순둥순둥 모습', badge: 'NEW' },
+      { id: 'char3', title: '키위새', price: 120, coin: '🪙', desc: '귀여운 친구', badge: '인기' },
+      { id: 'char4', title: '오독이', price: 84, coin: '🪙', desc: '통통한 아보카도', badge: '추천' },
+    ],
+    방: [
+      { id: 'room1', title: '파란 방', price: 0, coin: '코인', desc: '기본 방', badge: '기본' },
+      { id: 'room2', title: '꽃향기 방', price: 68, coin: '🪙', desc: '포근한 플로럴', badge: '할인' },
+      { id: 'room3', title: '레트로 방', price: 47, coin: '🪙', desc: '복고 감성', badge: '할인' },
+      { id: 'room4', title: '핑크 방', price: 72, coin: '🪙', desc: '달콤한 분위기', badge: 'NEW' },
+    ],
+    건물: [
+      { id: 'building1', title: '작은 집', price: 0, coin: '코인', desc: '아보카도의 보금자리', badge: '기본' },
+      { id: 'building2', title: '카페 하우스', price: 90, coin: '🪙', desc: '아늑한 카페', badge: '추천' },
+      { id: 'building3', title: '숲 속 오두막', price: 120, coin: '🪙', desc: '자연 속 힐링', badge: '인기' },
+      { id: 'building4', title: '루프탑', price: 110, coin: '🪙', desc: '하늘을 바라보는 공간', badge: 'NEW' },
+    ],
   };
 
-  const handleNutrient = () => {
-    if (useCoins(20)) {
-      careAvocado(2);
-      showToast('💊 영양제를 주었어요! (+2 케어)');
-      setAnimKey(k => k + 1);
-    } else {
-      showToast('코인이 부족해요 (필요: 20 🪙)');
+  const currentChar = storeItems.캐릭터.find(item => item.id === equipped.캐릭터);
+  const currentRoom = storeItems.방.find(item => item.id === equipped.방);
+  const currentBuilding = storeItems.건물.find(item => item.id === equipped.건물);
+
+  const owned = (item) => ownedItems.includes(item.id);
+  const handlePurchase = (item) => {
+    const alreadyOwned = owned(item);
+    if (alreadyOwned) {
+      setEquipped(prev => ({ ...prev, [storeTab]: item.id }));
+      showToast('✔️ 착용 완료');
+      return;
     }
+    if (item.price > 0 && !useCoins(item.price)) {
+      showToast('코인이 부족해요');
+      return;
+    }
+    setOwnedItems(prev => [...prev, item.id]);
+    setEquipped(prev => ({ ...prev, [storeTab]: item.id }));
+    showToast(`✅ ${item.title} 구매 성공`);
   };
+
+  const items = storeItems[storeTab].filter(item => {
+    const keyword = search.trim().toLowerCase();
+    const matches = item.title.toLowerCase().includes(keyword) || item.desc.toLowerCase().includes(keyword);
+    return matches && (!discountOnly || item.badge === '할인');
+  });
+
+  const renderBadge = (badge) => (
+    <View style={{ backgroundColor: badge === '할인' ? T.amberBg : T.brownBg, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 8 }}>
+      <Text style={{ fontSize: 10, fontWeight: '700', color: badge === '할인' ? T.amber : T.warmBrown }}>{badge}</Text>
+    </View>
+  );
+
+  if (viewMode === 'shop') {
+    return (
+      <ScrollView style={{ flex: 1, backgroundColor: '#f2f5f0' }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <TouchableOpacity
+            onPress={() => setViewMode('home')}
+            style={{ width: 36, height: 36, borderRadius: 12, borderWidth: 1, borderColor: T.rule2, alignItems: 'center', justifyContent: 'center', backgroundColor: T.paper }}>
+            <ChevronLeft size={18} color={T.ink4} />
+          </TouchableOpacity>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink }}>상점</Text>
+          <View style={{ width: 36 }} />
+        </View>
+
+        <View style={{ backgroundColor: T.paper, borderRadius: 24, padding: 18, borderWidth: 2, borderColor: T.olive, marginBottom: 16, shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1 }}>
+          <Text style={{ fontSize: 14, color: T.ink3, marginBottom: 8 }}>보유 코인</Text>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: T.warmBrown }}>{avocado.coins} 🪙</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+          {storeTabs.map(tabName => (
+            <TouchableOpacity
+              key={tabName}
+              onPress={() => setStoreTab(tabName)}
+              style={{
+                flex: 1, paddingVertical: 12, borderRadius: 16, alignItems: 'center',
+                backgroundColor: storeTab === tabName ? T.brownBg : T.paper,
+                borderWidth: storeTab === tabName ? 2 : 1, borderColor: storeTab === tabName ? T.warmBrown : T.rule2,
+              }}>
+              <Text style={{ color: storeTab === tabName ? T.warmBrown : T.ink, fontWeight: storeTab === tabName ? '700' : '500' }}>{tabName}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={{ backgroundColor: T.paper, borderRadius: 18, borderWidth: 1, borderColor: T.rule2, padding: 12, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10, backgroundColor: T.bg, borderRadius: 14, paddingHorizontal: 12, height: 40, borderWidth: 1, borderColor: T.rule2 }}>
+            <Search size={16} color={T.ink3} />
+            <TextInput
+              style={{ flex: 1, fontSize: 13, color: T.ink }}
+              placeholder="검색하세요"
+              placeholderTextColor={T.ink4}
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+          <TouchableOpacity
+            onPress={() => setDiscountOnly(prev => !prev)}
+            style={{ marginTop: 10, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: discountOnly ? T.brownBg : T.paper2, borderWidth: 1, borderColor: discountOnly ? T.brownBorder : T.rule2 }}>
+            <Text style={{ fontSize: 12, color: discountOnly ? T.warmBrown : T.ink3, fontWeight: discountOnly ? '600' : '400' }}>{discountOnly ? '할인 중만 보기' : '할인 중만 보기'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: T.ink }}>추천 아이템</Text>
+          <Text style={{ fontSize: 12, color: T.ink3 }}>{items.length}개</Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
+          {items.map(item => {
+            const alreadyOwned = owned(item);
+            const equippedItem = equipped[storeTab] === item.id;
+            return (
+              <View key={item.id} style={{ width: '48%', backgroundColor: T.paper, borderRadius: 20, borderWidth: 1, borderColor: T.rule2, padding: 14 }}>
+                {renderBadge(item.badge)}
+                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 8 }}>{item.price > 0 ? `${item.price}${item.coin}` : '무료'}</Text>
+                <View style={{ height: 100, borderRadius: 18, backgroundColor: '#f0f5ed', marginBottom: 12, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 30 }}>{storeTab === '캐릭터' ? '😊' : storeTab === '방' ? '🛋️' : '🏠'}</Text>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: T.ink, marginBottom: 4 }}>{item.title}</Text>
+                <Text style={{ fontSize: 11, color: T.ink3, marginBottom: 12 }}>{item.desc}</Text>
+                <TouchableOpacity
+                  onPress={() => handlePurchase(item)}
+                  style={{
+                    backgroundColor: alreadyOwned ? (equippedItem ? T.greenBg : T.brownBg) : T.warmBrown,
+                    paddingVertical: 12, borderRadius: 14, alignItems: 'center', borderWidth: 1,
+                    borderColor: alreadyOwned ? (equippedItem ? T.greenBorder : T.brownBorder) : T.warmBrown,
+                  }}>
+                  <Text style={{ color: alreadyOwned ? (equippedItem ? T.green : T.ink) : T.paper, fontWeight: '700' }}>
+                    {alreadyOwned ? (equippedItem ? '착용중' : '착용') : `구매 ${item.price}🪙`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={{ marginTop: 20, backgroundColor: '#e5ede1', borderRadius: 24, padding: 18, borderWidth: 2, borderColor: '#d0dfc8', shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: T.ink, marginBottom: 8 }}>아보카도 성장 상태</Text>
+          <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 12 }}>지금 꾸미는 아이템으로 캐릭터와 방, 건물을 함께 꾸며보세요.</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1, backgroundColor: T.paper, borderRadius: 18, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: T.rule2 }}>
+              <Text style={{ fontSize: 11, color: T.ink3 }}>레벨</Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: T.ink, marginTop: 8 }}>{avocado.level}</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: T.paper, borderRadius: 18, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: T.rule2 }}>
+              <Text style={{ fontSize: 11, color: T.ink3 }}>코인</Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: T.warmBrown, marginTop: 8 }}>{avocado.coins}</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: T.bg }} contentContainerStyle={{ padding: 16 }}>
-      {/* 제목 */}
-      <Text style={{ fontFamily: 'serif', fontSize: 22, fontWeight: '700', color: T.ink, marginBottom: 20, textAlign: 'center' }}>
-        My Avocado
-      </Text>
+    <View style={{ flex: 1, backgroundColor: '#faf8f4', position: 'relative', overflow: 'hidden' }}>
+      {/* 배경: 흰색 + 모래사장 */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+        {/* 하늘 흰색 */}
+        <View style={{ flex: 1, backgroundColor: '#ffffff' }} />
+        {/* 모래사장 */}
+        <View style={{ height: '40%', backgroundColor: '#d4b896' }} />
+      </View>
 
-      {/* 배경 그라데이션 (임시) */}
-      <View style={{
-        backgroundColor: T.greenBg, borderRadius: 20, padding: 40,
-        alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: T.greenBorder,
-        minHeight: 280,
-        justifyContent: 'center',
-      }}>
-        {/* 아보카도 캐릭터 (임시) */}
-        <View key={animKey} style={{
-          width: 140, height: 140, borderRadius: 70, backgroundColor: T.paper,
-          alignItems: 'center', justifyContent: 'center',
-          borderWidth: 3, borderColor: T.green,
-          shadowColor: T.shadow, shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
-        }}>
+      {/* 콘텐츠 */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 80 }} style={{ flex: 1 }}>
+        {/* 상단: 프로필 + 성장 상태 (왼쪽) */}
+        <View style={{ padding: 16, flexDirection: 'row', gap: 12 }}>
+          {/* 프로필 섹션 */}
           <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 64, marginBottom: 8 }}>
-              {levelEmoji}
-            </Text>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: T.green }}>
-              Lv. {avocado.level}
-            </Text>
-          </View>
-        </View>
+            {/* 동그란 프로필 */}
+            <TouchableOpacity
+              onPress={() => {
+                Alert.prompt(
+                  '프로필 사진 선택',
+                  '이모지를 입력하세요',
+                  [
+                    { text: '취소', style: 'cancel' },
+                    {
+                      text: '저장',
+                      onPress: (val) => {
+                        if (val?.trim()) {
+                          updateProfile({ photo: val.trim().charAt(0) });
+                          showToast('프로필 사진이 변경됐어요');
+                        }
+                      },
+                    },
+                  ],
+                  'plain-text',
+                  profile?.photo || '🥑'
+                );
+              }}
+              style={{
+                width: 80, height: 80, borderRadius: 40,
+                backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
+                alignItems: 'center', justifyContent: 'center',
+                marginBottom: 12, shadowColor: T.shadow, shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
+              }}>
+              <Text style={{ fontSize: 40 }}>{profile?.photo || '🥑'}</Text>
+            </TouchableOpacity>
 
-        {/* 레벨 진행도 */}
-        <View style={{ marginTop: 20, width: '100%' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={{ fontSize: 12, color: T.ink3, fontWeight: '600' }}>
-              성장 진행도
+            {/* 닉네임 */}
+            <Text style={{ fontSize: 12, color: T.ink3, textAlign: 'center', marginBottom: 16, fontWeight: '600' }}>
+              {profile?.nickname || '나의 아보카도'}
             </Text>
-            <Text style={{ fontSize: 12, color: T.green, fontWeight: '600' }}>
-              {avocado.totalCares} / {caresUntilNextLevel}
-            </Text>
-          </View>
-          <View style={{ height: 8, backgroundColor: T.paper2, borderRadius: 4, overflow: 'hidden' }}>
+
+            {/* 성장 상태 */}
             <View style={{
-              height: '100%', backgroundColor: T.green, borderRadius: 4,
-              width: `${nextLevelPercent}%`,
-            }} />
+              backgroundColor: T.paper, borderRadius: 14, borderWidth: 1.5, borderColor: T.rule2,
+              padding: 12, alignItems: 'center', width: 100,
+            }}>
+              <Text style={{ fontSize: 10, color: T.ink3, marginBottom: 4 }}>레벨</Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: T.warmBrown, marginBottom: 6 }}>
+                {avocado.level}
+              </Text>
+              <View style={{ height: 4, width: '100%', backgroundColor: T.paper2, borderRadius: 2, overflow: 'hidden' }}>
+                <View style={{ width: `${nextLevelPercent}%`, height: '100%', backgroundColor: T.green }} />
+              </View>
+              <Text style={{ fontSize: 8, color: T.ink4, marginTop: 4 }}>
+                {caresNeeded} 케어 남음
+              </Text>
+            </View>
+
+            {/* UI 버튼들 */}
+            <View style={{ marginTop: 16, gap: 8 }}>
+              <TouchableOpacity
+                style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  backgroundColor: T.brownBg, borderWidth: 1.5, borderColor: T.warmBrown,
+                  alignItems: 'center', justifyContent: 'center',
+                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
+                }}>
+                <Text style={{ fontSize: 20 }}>🛍️</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setViewMode('shop')}
+                style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  backgroundColor: T.blueBg, borderWidth: 1.5, borderColor: T.blue,
+                  alignItems: 'center', justifyContent: 'center',
+                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
+                }}>
+                <Text style={{ fontSize: 20 }}>🏪</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  backgroundColor: '#e8f5f0', borderWidth: 1.5, borderColor: '#9db99b',
+                  alignItems: 'center', justifyContent: 'center',
+                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
+                }}>
+                <Text style={{ fontSize: 20 }}>📝</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* 중앙: 아보카도 + 배경 */}
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 40 }}>
+            <View style={{
+              alignItems: 'center', justifyContent: 'flex-end',
+              height: 300,
+            }}>
+              {/* 아보카도 */}
+              <Text style={{ fontSize: 120 }}>
+                {currentChar?.title === '기본 캐릭터' ? '🥑' : currentChar?.title === '눈멍이' ? '🐻' : currentChar?.title === '키위새' ? '🐦' : '🦊'}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
-      {/* 현재 상태 */}
+      {/* 하단: 상점으로 이동 버튼 */}
       <View style={{
-        backgroundColor: T.paper, borderRadius: 16, padding: 16, marginBottom: 24,
-        borderWidth: 1, borderColor: T.rule2,
+        position: 'absolute', bottom: 80, left: 16, right: 16,
+        flexDirection: 'row', gap: 10,
       }}>
-        <Text style={{ fontSize: 13, color: T.ink3, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase' }}>
-          현재 상태
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <View style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={{ fontSize: 24, fontWeight: '700', color: T.blue }}>
-              {avocado.coins}
-            </Text>
-            <Text style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>코인</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={{ fontSize: 24, fontWeight: '700', color: T.amber }}>
-              {avocado.careThisWeek}
-            </Text>
-            <Text style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>이주 케어</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={{ fontSize: 24, fontWeight: '700', color: T.green }}>
-              {caresNeeded}
-            </Text>
-            <Text style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>필요한 케어</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* 케어 버튼 */}
-      <Text style={{ fontSize: 13, color: T.ink3, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase' }}>
-        아보카도 돌보기
-      </Text>
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
         <TouchableOpacity
-          onPress={handleWater}
+          onPress={() => setViewMode('shop')}
           style={{
-            flex: 1, backgroundColor: T.blueBg, borderRadius: 14, padding: 16,
-            alignItems: 'center', borderWidth: 1, borderColor: T.blueBorder,
+            flex: 1, backgroundColor: T.warmBrown, borderRadius: 16, paddingVertical: 12,
+            alignItems: 'center', shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
           }}>
-          <Text style={{ fontSize: 24, marginBottom: 8 }}>🌊</Text>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: T.blue, marginBottom: 2 }}>물주기</Text>
-          <Text style={{ fontSize: 11, color: T.blue }}>10 🪙</Text>
+          <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>상점 🛍️</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={handleNutrient}
           style={{
-            flex: 1, backgroundColor: T.greenBg, borderRadius: 14, padding: 16,
-            alignItems: 'center', borderWidth: 1, borderColor: T.greenBorder,
+            flex: 1, backgroundColor: T.blue, borderRadius: 16, paddingVertical: 12,
+            alignItems: 'center', shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
           }}>
-          <Text style={{ fontSize: 24, marginBottom: 8 }}>💊</Text>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: T.green, marginBottom: 2 }}>영양제</Text>
-          <Text style={{ fontSize: 11, color: T.green }}>20 🪙</Text>
+          <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>배경 🎨</Text>
         </TouchableOpacity>
       </View>
-
-      {/* 정보 */}
-      <Card>
-        <CardTitle icon={<Sparkles size={15} color={T.blue} />} title="팁" T={T} />
-        <Text style={{ fontSize: 12, color: T.ink2, lineHeight: 18 }}>
-          • 단어 추가: +3 🪙 (하루 최대 3개){'\n'}
-          • 퀴즈 정답: +1 🪙 (하루 최대 10개){'\n'}
-          • 매일 로그인: +10 🪙{'\n'}
-          • 케어 25회 → Lv 2{'\n'}
-          • 케어 50회 → Lv 3
-        </Text>
-      </Card>
-    </ScrollView>
+    </View>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  SETTINGS SCREEN
+//  SETTINGS SCREEN (Modal)
 // ─────────────────────────────────────────────────────────────────
 function SettingsScreen() {
-  const { T, theme, toggleTheme, words, geminiKey, saveGeminiKey, showToast, sbUser, doLogout, profile, updateProfile } = useApp();
+  const { T, theme, toggleTheme, geminiKey, saveGeminiKey, showToast, sbUser, doLogout, profile, updateProfile, setShowSettings } = useApp();
   const [keyInput, setKeyInput] = useState(geminiKey);
   const [showKey, setShowKey]   = useState(false);
   const [showNicknameEdit, setShowNicknameEdit] = useState(false);
   const [nicknameInput, setNicknameInput] = useState(profile?.nickname || '나의 아보카도');
 
-  const exportData = async () => {
-    const json = JSON.stringify(words, null, 2);
-    // Expo에서는 expo-sharing + expo-file-system으로 실제 export 구현
-    Alert.alert('내보내기', `${words.length}개 단어 데이터\n(실제 앱에서는 파일로 저장됩니다)\n\n${json.slice(0, 200)}...`);
-  };
-
-  const clearAll = () => {
-    Alert.alert('전체 삭제', '모든 단어를 삭제할까요? 되돌릴 수 없어요.', [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: async () => {
-          await AsyncStorage.removeItem(STORAGE_KEY);
-          showToast('전체 삭제 완료');
-        }},
-    ]);
-  };
-
   const SectionLabel = ({ label }) => (
     <Text style={{
       fontSize: 11, fontWeight: '600', color: T.ink3, textTransform: 'uppercase',
-      letterSpacing: 0.7, paddingHorizontal: 4, paddingBottom: 8, paddingTop: 4,
-      borderBottomWidth: 1, borderBottomColor: T.rule2, marginBottom: 8,
+      letterSpacing: 0.7, paddingHorizontal: 16, paddingBottom: 8, paddingTop: 12,
+      borderBottomWidth: 1, borderBottomColor: T.rule2, marginBottom: 0,
     }}>{label}</Text>
   );
 
-  const SettingsRow = ({ title, desc, right, last }) => (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center',
-      paddingVertical: 14, paddingHorizontal: 16,
-      borderBottomWidth: last ? 0 : 1, borderBottomColor: T.rule,
-      gap: 12,
-    }}>
+  const SettingsRow = ({ title, desc, right, last, onPress }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={!onPress}
+      style={{
+        flexDirection: 'row', alignItems: 'center',
+        paddingVertical: 14, paddingHorizontal: 16,
+        borderBottomWidth: last ? 0 : 1, borderBottomColor: T.rule,
+        gap: 12,
+        backgroundColor: onPress ? T.paper : 'transparent',
+      }}>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, color: T.ink, marginBottom: 2 }}>{title}</Text>
+        <Text style={{ fontSize: 14, color: T.ink, marginBottom: 2, fontWeight: '500' }}>{title}</Text>
         {desc ? <Text style={{ fontSize: 12, color: T.ink3 }}>{desc}</Text> : null}
       </View>
       {right}
-    </View>
+    </TouchableOpacity>
   );
 
   const cardStyle = {
-    backgroundColor: T.paper, borderRadius: 14, borderWidth: 1,
-    borderColor: T.rule2, marginBottom: 20, overflow: 'hidden',
+    backgroundColor: T.paper, borderRadius: 20, borderWidth: 2,
+    borderColor: T.olive, marginBottom: 16, overflow: 'hidden',
+    shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 2,
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+    <Modal visible={true} transparent animationType="slide">
+      <View style={{
+        flex: 1, backgroundColor: T.bg,
+        paddingTop: 16, paddingBottom: 16,
+      }}>
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          paddingHorizontal: 16, paddingVertical: 12, marginBottom: 12,
+        }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: T.ink }}>설정</Text>
+          <TouchableOpacity
+            onPress={() => setShowSettings(false)}
+            style={{
+              width: 32, height: 32, borderRadius: 10, borderWidth: 1,
+              borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
+            }}>
+            <X size={18} color={T.ink3} />
+          </TouchableOpacity>
+        </View>
 
-      {/* 프로필 */}
-      <SectionLabel label="프로필" />
-      <View style={cardStyle}>
-        <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: T.rule }}>
-          <Text style={{ fontSize: 14, color: T.ink, marginBottom: 8 }}>닉네임</Text>
-          {showNicknameEdit ? (
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 20 }}>
+          {/* 프로필 */}
+          <SectionLabel label="프로필" />
+          <View style={cardStyle}>
+            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: T.rule, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.prompt(
+                    '프로필 사진 선택',
+                    '이모지를 입력하세요',
+                    [
+                      { text: '취소', style: 'cancel' },
+                      {
+                        text: '저장',
+                        onPress: (val) => {
+                          if (val?.trim()) {
+                            updateProfile({ photo: val.trim().charAt(0) });
+                            showToast('프로필 사진이 변경됐어요');
+                          }
+                        },
+                      },
+                    ],
+                    'plain-text',
+                    profile?.photo || '🥑'
+                  );
+                }}
+                style={{
+                  width: 80, height: 80, borderRadius: 40,
+                  backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
+                  alignItems: 'center', justifyContent: 'center',
+                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
+                }}>
+                <Text style={{ fontSize: 38 }}>{profile?.photo || '🥑'}</Text>
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 4 }}>닉네임</Text>
+                {showNicknameEdit ? (
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TextInput
+                      style={{
+                        flex: 1, backgroundColor: T.bg, borderRadius: 10, borderWidth: 1,
+                        borderColor: T.rule2, paddingHorizontal: 12, paddingVertical: 8,
+                        fontSize: 13, color: T.ink,
+                      }}
+                      placeholder="닉네임"
+                      value={nicknameInput}
+                      onChangeText={setNicknameInput}
+                      autoFocus
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        updateProfile({ nickname: nicknameInput });
+                        setShowNicknameEdit(false);
+                        showToast('닉네임이 변경됐어요');
+                      }}
+                      style={{
+                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                        borderWidth: 1, borderColor: T.warmBrown, backgroundColor: T.brownBg,
+                      }}>
+                      <Check size={12} color={T.warmBrown} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ fontSize: 14, color: T.ink, fontWeight: '600' }}>
+                      {profile?.nickname || '나의 아보카도'}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowNicknameEdit(true)}
+                      style={{
+                        paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                        borderWidth: 1, borderColor: T.rule2, backgroundColor: T.paper2,
+                      }}>
+                      <Pencil size={12} color={T.ink3} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* 계정 */}
+          {sbUser && (
+            <>
+              <SectionLabel label="계정" />
+              <View style={cardStyle}>
+                <SettingsRow
+                  title={sbUser.email}
+                  desc="Supabase 동기화 활성화"
+                  last
+                  right={
+                    <TouchableOpacity
+                      onPress={doLogout}
+                      style={{
+                        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+                        borderWidth: 1, borderColor: T.red, backgroundColor: T.redBg,
+                      }}>
+                      <Text style={{ fontSize: 12, color: T.red, fontWeight: '600' }}>로그아웃</Text>
+                    </TouchableOpacity>
+                  }
+                />
+              </View>
+            </>
+          )}
+
+          {/* AI API 키 */}
+          <SectionLabel label="AI API 키" />
+          <View style={cardStyle}>
+            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: T.rule, gap: 10 }}>
+              <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 4 }}>Gemini API 키</Text>
               <TextInput
                 style={{
-                  flex: 1, backgroundColor: T.bg, borderRadius: 10, borderWidth: 1,
-                  borderColor: T.rule2, paddingHorizontal: 12, paddingVertical: 10,
-                  fontSize: 13, color: T.ink,
+                  backgroundColor: T.bg, borderRadius: 10, borderWidth: 1,
+                  borderColor: T.rule2, color: T.ink, paddingHorizontal: 12, paddingVertical: 10,
+                  fontSize: 13, fontFamily: 'monospace',
                 }}
-                placeholder="닉네임 입력"
-                placeholderTextColor={T.ink4}
-                value={nicknameInput}
-                onChangeText={setNicknameInput}
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  updateProfile({ nickname: nicknameInput });
-                  setShowNicknameEdit(false);
-                  showToast('✅ 닉네임 저장됨');
-                }}
-                style={{ paddingHorizontal: 14, borderRadius: 10, backgroundColor: T.blue, justifyContent: 'center' }}>
-                <Check size={16} color={T.bg} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setNicknameInput(profile?.nickname || '나의 아보카도');
-                  setShowNicknameEdit(false);
-                }}
-                style={{ paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: T.rule2, justifyContent: 'center' }}>
-                <X size={16} color={T.ink3} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <SettingsRow
-              title={profile?.nickname || '나의 아보카도'}
-              desc="아보카도 이름"
-              right={
-                <TouchableOpacity
-                  onPress={() => setShowNicknameEdit(true)}
-                  style={{
-                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
-                    borderWidth: 1, borderColor: T.rule2, backgroundColor: T.paper2,
-                  }}>
-                  <Text style={{ fontSize: 12, color: T.ink2 }}>수정</Text>
-                </TouchableOpacity>
-              }
-              last
-            />
-          )}
-        </View>
-      </View>
-
-      {/* 계정 */}
-      {sbUser && (
-        <>
-          <SectionLabel label="계정" />
-          <View style={cardStyle}>
-            <SettingsRow
-              title={sbUser.email}
-              desc="Supabase 동기화 활성화"
-              last
-              right={
-                <TouchableOpacity
-                  onPress={doLogout}
-                  style={{
-                    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
-                    borderWidth: 1, borderColor: T.red, backgroundColor: T.redBg,
-                  }}>
-                  <Text style={{ fontSize: 12, color: T.red, fontWeight: '500' }}>로그아웃</Text>
-                </TouchableOpacity>
-              }
-            />
-          </View>
-        </>
-      )}
-
-      {/* AI API */}
-      <SectionLabel label="AI API 키" />
-      <View style={cardStyle}>
-        <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: T.rule }}>
-          <Text style={{ fontSize: 14, color: T.ink, marginBottom: 2 }}>Gemini API 키</Text>
-          <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 10 }}>Google Gemini — 단어 자동 생성에 사용</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <View style={{
-              flex: 1, flexDirection: 'row', alignItems: 'center',
-              backgroundColor: T.bg, borderRadius: 10, borderWidth: 1, borderColor: T.rule2,
-              paddingHorizontal: 12, height: 42,
-            }}>
-              <TextInput
-                style={{ flex: 1, fontSize: 13, color: T.ink }}
                 placeholder="AIzaSy..."
                 placeholderTextColor={T.ink4}
-                secureTextEntry={!showKey}
                 value={keyInput}
                 onChangeText={setKeyInput}
+                secureTextEntry={!showKey}
               />
-              <TouchableOpacity onPress={() => setShowKey(!showKey)}>
-                <Text style={{ fontSize: 11, color: T.blue }}>{showKey ? '숨김' : '표시'}</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setShowKey(!showKey)}
+                  style={{
+                    flex: 1, backgroundColor: T.paper2, borderRadius: 10, paddingVertical: 10,
+                    alignItems: 'center', borderWidth: 1, borderColor: T.rule2,
+                  }}>
+                  <Text style={{ color: T.ink3, fontWeight: '600', fontSize: 12 }}>
+                    {showKey ? '숨기기' : '보이기'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    saveGeminiKey(keyInput);
+                    showToast('API 키가 저장됐어요');
+                  }}
+                  style={{
+                    flex: 1, backgroundColor: T.warmBrown, borderRadius: 10, paddingVertical: 10,
+                    alignItems: 'center',
+                  }}>
+                  <Text style={{ color: T.paper, fontWeight: '600', fontSize: 12 }}>저장</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <TouchableOpacity
-              onPress={async () => { await saveGeminiKey(keyInput); showToast('저장됨'); }}
-              style={{
-                paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: T.rule2,
-                backgroundColor: T.paper2, alignItems: 'center', justifyContent: 'center',
-              }}>
-              <Check size={16} color={T.green} />
-            </TouchableOpacity>
           </View>
-        </View>
-        <View style={{ padding: 12, backgroundColor: T.amberBg }}>
-          <Text style={{ fontSize: 12, color: T.amber, lineHeight: 18 }}>
-            💡 <Text style={{ fontWeight: '600' }}>aistudio.google.com</Text>에서 무료 API 키를 발급받으세요. 키는 이 기기에만 저장됩니다.
-          </Text>
-        </View>
-      </View>
 
-      {/* 화면 */}
-      <SectionLabel label="화면" />
-      <View style={cardStyle}>
-        <SettingsRow
-          title="다크 모드"
-          desc="어두운 배경으로 전환"
-          last
-          right={
-            <Switch
-              value={theme === 'dark'}
-              onValueChange={toggleTheme}
-              trackColor={{ false: T.rule2, true: T.blue }}
-              thumbColor="#fff"
+          {/* 화면 */}
+          <SectionLabel label="화면" />
+          <View style={cardStyle}>
+            <SettingsRow
+              title="다크 모드"
+              desc="어두운 배경으로 전환"
+              last
+              right={
+                <Switch
+                  value={theme === 'dark'}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: T.rule2, true: T.warmBrown }}
+                  thumbColor="#fff"
+                />
+              }
             />
-          }
-        />
-      </View>
+          </View>
 
-      {/* 데이터 */}
-      <SectionLabel label="데이터" />
-      <View style={cardStyle}>
-        <SettingsRow
-          title="JSON 내보내기"
-          desc={`${words.length}개 단어 백업`}
-          right={
-            <TouchableOpacity
-              onPress={exportData}
-              style={{
-                paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
-                borderWidth: 1, borderColor: T.rule2, backgroundColor: T.paper2,
-              }}>
-              <Text style={{ fontSize: 12, color: T.ink2 }}>저장</Text>
-            </TouchableOpacity>
-          }
-        />
-        <SettingsRow
-          title="JSON 가져오기"
-          desc="백업 파일에서 불러오기"
-          last
-          right={
-            <TouchableOpacity
-              onPress={() => Alert.alert('가져오기', 'expo-document-picker 연동 후 사용 가능합니다.')}
-              style={{
-                paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
-                borderWidth: 1, borderColor: T.rule2, backgroundColor: T.paper2,
-              }}>
-              <Text style={{ fontSize: 12, color: T.ink2 }}>불러오기</Text>
-            </TouchableOpacity>
-          }
-        />
-      </View>
+          {/* 고객지원 */}
+          <SectionLabel label="고객지원" />
+          <View style={cardStyle}>
+            <SettingsRow
+              title="공지사항"
+              desc="앱 업데이트 소식과 공지"
+              right={<ChevronRight size={16} color={T.ink3} />}
+              onPress={() => showToast('공지사항 페이지 준비 중입니다.')}
+            />
+            <SettingsRow
+              title="문의하기"
+              desc="버그 리포트 및 피드백"
+              last
+              right={<ChevronRight size={16} color={T.ink3} />}
+              onPress={() => showToast('문의 페이지 준비 중입니다.')}
+            />
+          </View>
 
-      {/* 위험 */}
-      <SectionLabel label="위험 구역" />
-      <View style={cardStyle}>
-        <SettingsRow
-          title="전체 단어 삭제"
-          desc="모든 단어를 삭제해요. 되돌릴 수 없어요."
-          last
-          right={
-            <TouchableOpacity
-              onPress={clearAll}
-              style={{
-                paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
-                backgroundColor: T.redBg, borderWidth: 1, borderColor: T.redBorder,
-              }}>
-              <Text style={{ fontSize: 12, color: T.red }}>초기화</Text>
-            </TouchableOpacity>
-          }
-        />
+          {/* 앱 정보 */}
+          <SectionLabel label="앱 정보" />
+          <View style={cardStyle}>
+            <SettingsRow
+              title="My Avoca"
+              desc="v1.0.0 · OPIc 영어 단어장"
+              last
+            />
+          </View>
+        </ScrollView>
       </View>
-
-      {/* 앱 정보 */}
-      <View style={{ alignItems: 'center', marginTop: 12, gap: 4 }}>
-        <Text style={{ fontFamily: 'serif', fontSize: 16, fontWeight: '700', color: T.ink }}>My Vocab</Text>
-        <Text style={{ fontSize: 11, color: T.ink4 }}>v1.0.0 · OPIc 영어 단어장</Text>
-      </View>
-    </ScrollView>
+    </Modal>
   );
 }
 
@@ -2221,9 +2453,9 @@ function Card({ children, style }) {
   const { T } = useApp();
   return (
     <View style={[{
-      backgroundColor: T.paper, borderRadius: 14, padding: 18, marginBottom: 14,
-      borderWidth: 1, borderColor: T.rule2,
-      shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
+      backgroundColor: T.paper, borderRadius: 24, padding: 18, marginBottom: 14,
+      borderWidth: 2, borderColor: T.olive,
+      shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6,
       elevation: 2,
     }, style]}>
       {children}

@@ -1,0 +1,12 @@
+project = "myvocab"
+
+[build]
+  command = "npm run build:web"
+  directory = "dist"
+
+[build.environment]
+  NODE_ENV = "production"
+
+[[routes]]
+  pattern = "/*"
+  serve = "/index.html"
