@@ -2033,136 +2033,236 @@ function AvocadoScreen() {
     );
   }
 
+  // 캐릭터 이모지 매핑
+  const charEmoji = { char1: '🥑', char2: '🐻', char3: '🐦', char4: '🦊' };
+  const displayChar = charEmoji[equipped.캐릭터] || '🥑';
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#faf8f4', position: 'relative', overflow: 'hidden' }}>
-      {/* 배경: 흰색 + 모래사장 */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-        {/* 하늘 흰색 */}
-        <View style={{ flex: 1, backgroundColor: '#ffffff' }} />
-        {/* 모래사장 */}
-        <View style={{ height: '40%', backgroundColor: '#d4b896' }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: T.bg }}>
 
-      {/* 콘텐츠 */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 80 }} style={{ flex: 1 }}>
-        {/* 상단: 프로필 + 성장 상태 (왼쪽) */}
-        <View style={{ padding: 16, flexDirection: 'row', gap: 12 }}>
-          {/* 프로필 섹션 */}
-          <View style={{ alignItems: 'center' }}>
-            {/* 동그란 프로필 */}
-            <View style={{
-              width: 80, height: 80, borderRadius: 40,
-              backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
-              alignItems: 'center', justifyContent: 'center',
-              marginBottom: 12, shadowColor: T.shadow, shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
-              overflow: 'hidden',
-            }}>
-              {profile?.photoUri
-                ? <Image source={{ uri: profile.photoUri }} style={{ width: 80, height: 80 }} resizeMode="cover" />
-                : <Text style={{ fontSize: 40 }}>{profile?.photo || '🥑'}</Text>
-              }
-            </View>
+      {/* ── 상단 상태바 ── */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, gap: 10,
+      }}>
+        {/* 아바타 */}
+        <View style={{
+          width: 44, height: 44, borderRadius: 22,
+          backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
+          alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        }}>
+          {profile?.photoUri
+            ? <Image source={{ uri: profile.photoUri }} style={{ width: 44, height: 44 }} resizeMode="cover" />
+            : <Text style={{ fontSize: 22 }}>{profile?.photo || '🥑'}</Text>
+          }
+        </View>
 
-            {/* 닉네임 */}
-            <Text style={{ fontSize: 12, color: T.ink3, textAlign: 'center', marginBottom: 16, fontWeight: '600' }}>
+        {/* 닉네임 + 레벨바 */}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: T.ink }}>
               {profile?.nickname || '나의 아보카도'}
             </Text>
-
-            {/* 성장 상태 */}
             <View style={{
-              backgroundColor: T.paper, borderRadius: 14, borderWidth: 1.5, borderColor: T.rule2,
-              padding: 12, alignItems: 'center', width: 100,
+              backgroundColor: T.brownBg, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
             }}>
-              <Text style={{ fontSize: 10, color: T.ink3, marginBottom: 4 }}>레벨</Text>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: T.warmBrown, marginBottom: 6 }}>
-                {avocado.level}
-              </Text>
-              <View style={{ height: 4, width: '100%', backgroundColor: T.paper2, borderRadius: 2, overflow: 'hidden' }}>
-                <View style={{ width: `${nextLevelPercent}%`, height: '100%', backgroundColor: T.green }} />
-              </View>
-              <Text style={{ fontSize: 8, color: T.ink4, marginTop: 4 }}>
-                {caresNeeded} 케어 남음
-              </Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: T.warmBrown }}>Lv.{avocado.level}</Text>
             </View>
-
-            {/* UI 버튼들 */}
-            <View style={{ marginTop: 16, gap: 8 }}>
-              <TouchableOpacity
-                style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  backgroundColor: T.brownBg, borderWidth: 1.5, borderColor: T.warmBrown,
-                  alignItems: 'center', justifyContent: 'center',
-                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
-                }}>
-                <Text style={{ fontSize: 20 }}>🛍️</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setViewMode('shop')}
-                style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  backgroundColor: T.blueBg, borderWidth: 1.5, borderColor: T.blue,
-                  alignItems: 'center', justifyContent: 'center',
-                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
-                }}>
-                <Text style={{ fontSize: 20 }}>🏪</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  backgroundColor: '#e8f5f0', borderWidth: 1.5, borderColor: '#9db99b',
-                  alignItems: 'center', justifyContent: 'center',
-                  shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
-                }}>
-                <Text style={{ fontSize: 20 }}>📝</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={{ fontSize: 11, color: T.warmBrown, fontWeight: '600', marginLeft: 'auto' }}>
+              {avocado.coins} 🪙
+            </Text>
           </View>
-
-          {/* 중앙: 아보카도 + 배경 */}
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 40 }}>
+          {/* 경험치 바 */}
+          <View style={{ height: 5, backgroundColor: T.paper2, borderRadius: 3, overflow: 'hidden' }}>
             <View style={{
-              alignItems: 'center', justifyContent: 'flex-end',
-              height: 300,
-            }}>
-              {/* 아보카도 */}
-              <Text style={{ fontSize: 120 }}>
-                {currentChar?.title === '기본 캐릭터' ? '🥑' : currentChar?.title === '눈멍이' ? '🐻' : currentChar?.title === '키위새' ? '🐦' : '🦊'}
-              </Text>
-            </View>
+              width: `${nextLevelPercent}%`, height: '100%',
+              backgroundColor: T.green, borderRadius: 3,
+            }} />
           </View>
+          <Text style={{ fontSize: 9, color: T.ink4, marginTop: 2 }}>
+            다음 레벨까지 {caresNeeded}번 케어
+          </Text>
         </View>
-      </ScrollView>
 
-      {/* 하단: 상점으로 이동 버튼 */}
+        {/* 설정 버튼 */}
+        <TouchableOpacity
+          onPress={() => setViewMode('shop')}
+          style={{
+            width: 36, height: 36, borderRadius: 11, backgroundColor: T.paper,
+            borderWidth: 1, borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
+          }}>
+          <Settings size={16} color={T.ink3} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── 방 (Room) ── */}
+      <View style={{ flex: 1, paddingHorizontal: 12, paddingBottom: 12 }}>
+        <View style={{
+          flex: 1, borderRadius: 28, overflow: 'hidden',
+          shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.10, shadowRadius: 12, elevation: 4,
+        }}>
+
+          {/* 벽 (Wall) — 오트밀 아이보리 벽지 */}
+          <View style={{ flex: 6, backgroundColor: '#f5f0e6', position: 'relative' }}>
+
+            {/* 벽지 세로 줄무늬 — 미세한 장식 */}
+            {[...Array(12)].map((_, i) => (
+              <View key={i} style={{
+                position: 'absolute', top: 0, bottom: 0,
+                left: `${(i / 12) * 100}%`, width: 1,
+                backgroundColor: 'rgba(180,165,140,0.12)',
+              }} />
+            ))}
+
+            {/* 벽 상단 몰딩 라인 */}
+            <View style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+              backgroundColor: '#e8e0d0',
+            }} />
+
+            {/* ── 선반 자리 (Placeholder) ── */}
+            <View style={{
+              position: 'absolute', top: '14%', left: '8%',
+              width: '30%', height: 52,
+              backgroundColor: 'rgba(210,195,170,0.35)',
+              borderRadius: 10, borderWidth: 1.5,
+              borderColor: 'rgba(180,160,130,0.4)',
+              borderStyle: 'dashed',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Text style={{ fontSize: 10, color: 'rgba(140,120,95,0.7)', fontWeight: '600' }}>선반</Text>
+            </View>
+
+            {/* ── 우측 액자 자리 (Placeholder) ── */}
+            <View style={{
+              position: 'absolute', top: '10%', right: '10%',
+              width: 52, height: 64,
+              backgroundColor: 'rgba(210,195,170,0.3)',
+              borderRadius: 8, borderWidth: 1.5,
+              borderColor: 'rgba(180,160,130,0.4)',
+              borderStyle: 'dashed',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Text style={{ fontSize: 9, color: 'rgba(140,120,95,0.7)', fontWeight: '600' }}>액자</Text>
+            </View>
+
+          </View>
+
+          {/* 벽-바닥 경계선 */}
+          <View style={{ height: 3, backgroundColor: '#d8c8b0' }} />
+
+          {/* 바닥 (Floor) — 따뜻한 베이지 */}
+          <View style={{ flex: 4, backgroundColor: '#e8dece', position: 'relative', alignItems: 'center' }}>
+
+            {/* 원형 러그 — 연한 연두색 */}
+            <View style={{
+              position: 'absolute',
+              top: '5%',
+              width: 200, height: 120,
+              borderRadius: 60,
+              backgroundColor: '#c8ddb8',
+              borderWidth: 3, borderColor: '#b5cc9f',
+              alignItems: 'center', justifyContent: 'flex-start',
+              overflow: 'visible',
+            }}>
+              {/* 러그 안쪽 테두리 장식 */}
+              <View style={{
+                position: 'absolute', top: 8, left: 10, right: 10, bottom: 8,
+                borderRadius: 52, borderWidth: 1.5,
+                borderColor: 'rgba(255,255,255,0.55)',
+              }} />
+
+              {/* ── 소파 자리 (Placeholder) ── */}
+              <View style={{
+                marginTop: 8,
+                width: '72%', height: 36,
+                backgroundColor: 'rgba(255,255,255,0.5)',
+                borderRadius: 10, borderWidth: 1.5,
+                borderColor: 'rgba(160,185,130,0.5)',
+                borderStyle: 'dashed',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ fontSize: 10, color: 'rgba(100,130,80,0.8)', fontWeight: '600' }}>소파</Text>
+              </View>
+            </View>
+
+            {/* 캐릭터 — 러그 위 중앙 */}
+            <View style={{
+              position: 'absolute',
+              bottom: '22%',
+              alignItems: 'center',
+            }}>
+              <Text style={{ fontSize: 72 }}>{displayChar}</Text>
+            </View>
+
+            {/* 바닥 나무 결 라인 */}
+            {[...Array(5)].map((_, i) => (
+              <View key={i} style={{
+                position: 'absolute',
+                top: 0, bottom: 0,
+                left: `${(i / 5) * 100}%`, width: 1,
+                backgroundColor: 'rgba(160,135,100,0.08)',
+              }} />
+            ))}
+          </View>
+
+        </View>
+      </View>
+
+      {/* ── 우측 퀵버튼 (오버레이) ── */}
       <View style={{
-        position: 'absolute', bottom: 80, left: 16, right: 16,
+        position: 'absolute', right: 20,
+        top: '22%',
+        gap: 8,
+      }}>
+        {[
+          { emoji: '🛍️', onPress: () => setViewMode('shop'), bg: T.brownBg, border: T.warmBrown },
+          { emoji: '🎨', onPress: () => {}, bg: T.blueBg, border: T.blue },
+          { emoji: '📝', onPress: () => {}, bg: T.greenBg, border: T.green },
+        ].map(({ emoji, onPress, bg, border }, i) => (
+          <TouchableOpacity
+            key={i}
+            onPress={onPress}
+            style={{
+              width: 42, height: 42, borderRadius: 13,
+              backgroundColor: bg, borderWidth: 1.5, borderColor: border,
+              alignItems: 'center', justifyContent: 'center',
+              shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+            }}>
+            <Text style={{ fontSize: 18 }}>{emoji}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* ── 하단 액션 버튼 ── */}
+      <View style={{
+        paddingHorizontal: 16, paddingBottom: 12, paddingTop: 6,
         flexDirection: 'row', gap: 10,
       }}>
         <TouchableOpacity
           onPress={() => setViewMode('shop')}
           style={{
-            flex: 1, backgroundColor: T.warmBrown, borderRadius: 16, paddingVertical: 12,
-            alignItems: 'center', shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+            flex: 1, backgroundColor: T.warmBrown, borderRadius: 16, paddingVertical: 13,
+            alignItems: 'center',
+            shadowColor: T.warmBrown, shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.22, shadowRadius: 6, elevation: 3,
           }}>
-          <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>상점 🛍️</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>상점 🛍️</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={{
-            flex: 1, backgroundColor: T.blue, borderRadius: 16, paddingVertical: 12,
-            alignItems: 'center', shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+            flex: 1, backgroundColor: T.blue, borderRadius: 16, paddingVertical: 13,
+            alignItems: 'center',
+            shadowColor: T.blue, shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.18, shadowRadius: 6, elevation: 3,
           }}>
-          <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>배경 🎨</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>배경 🎨</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 }
