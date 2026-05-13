@@ -2347,6 +2347,7 @@ function AvocadoScreen() {
 
   // 캐릭터 상태 & 애니메이션
   const [charState, setCharState] = useState('idle'); // idle | uplifting | happy | sad | surprised
+  const [isPlayingAnimation, setIsPlayingAnimation] = useState(false); // Lottie 애니메이션 재생 중 여부
   const charStateTimer = useRef(null);
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef(null);
@@ -2385,6 +2386,7 @@ function AvocadoScreen() {
 
   const handleCharacterTap = () => {
     // 애니메이션 재생
+    setIsPlayingAnimation(true);
     if (lottieRef.current) {
       lottieRef.current.play();
     }
@@ -2803,19 +2805,29 @@ function AvocadoScreen() {
                 activeOpacity={1}
                 onPress={handleCharacterTap}
                 style={{ position: 'absolute', left: pos.x, top: pos.y, width: pos.w, height: pos.h, zIndex: 10 }}>
-                <Animated.View style={{ flex: 1, transform: [{ translateY: bounceAnim }] }}>
-                  <LottieView
-                    ref={lottieRef}
-                    source={require('./assets/images/items/character/basic/Animation-1.json')}
-                    autoPlay={false}
-                    loop={false}
-                    style={{ width: pos.w, height: pos.h }}
-                  />
+                <Animated.View style={{ flex: 1, transform: [{ translateY: bounceAnim }], overflow: 'hidden' }}>
                   <Image
                     source={src}
-                    style={{ position: 'absolute', width: pos.w, height: pos.h, top: 0, left: 0 }}
+                    style={{ width: pos.w, height: pos.h }}
                     resizeMode="contain"
                   />
+                  {isPlayingAnimation && (
+                    <LottieView
+                      ref={lottieRef}
+                      source={require('./assets/images/items/character/basic/Animation-1.json')}
+                      autoPlay={false}
+                      loop={false}
+                      onAnimationFinish={() => setIsPlayingAnimation(false)}
+                      style={{ 
+                        position: 'absolute',
+                        top: 0, 
+                        left: 0, 
+                        width: pos.w, 
+                        height: pos.h,
+                        backgroundColor: 'transparent'
+                      }}
+                    />
+                  )}
                 </Animated.View>
               </TouchableOpacity>
             );
