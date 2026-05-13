@@ -14,47 +14,50 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { registerRootComponent } from 'expo';
 import * as ImagePicker from 'expo-image-picker';
+import LottieView from 'lottie-react-native';
 import {
-  Award,
-  BookMarked,
-  BrainCircuit,
-  Check, ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Layers,
-  Leaf,
-  Moon,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Search,
-  Settings,
-  Sparkles,
-  Sun, Trash2,
-  X
+    Award,
+    BookMarked,
+    BrainCircuit,
+    Check, ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    ChevronUp,
+    Layers,
+    Leaf,
+    Moon,
+    Pencil,
+    Plus,
+    RotateCcw,
+    Search,
+    Settings,
+    Sparkles,
+    Sun, Trash2,
+    Trophy,
+    X
 } from 'lucide-react';
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 import {
-  Alert,
-  Animated,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StatusBar,
-  Switch,
-  Text, TextInput, TouchableOpacity,
-  View
+    Alert,
+    Animated,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    PanResponder,
+    Platform,
+    ScrollView,
+    StatusBar,
+    Switch,
+    Text, TextInput, TouchableOpacity,
+    View
 } from 'react-native';
 
 // ─────────────────────────────────────────────────────────────────
@@ -181,6 +184,7 @@ const CATEGORIES_KEY   = 'myvocab_categories';
 const AVOCADO_KEY      = 'myvocab_avocado';
 const DAILY_LOG_KEY    = 'myvocab_daily_log';
 const PROFILE_KEY      = 'myvocab_profile';
+const LEADERBOARD_KEY  = 'myvocab_leaderboard';
 const PER_PAGE         = 20;
 const WORD_TYPES       = ['n.', 'v.', 'adj.', 'adv.', 'phr.'];
 
@@ -343,6 +347,10 @@ const INITIAL_AVOCADO = {
   lastLogin: today(),
   dailyCoinsFromQuiz: 0,
   dailyCoinsFromWords: 0,
+  streak: 0,
+  lastStreakDate: '',
+  monthlyCoinsEarned: 0,
+  leaderboardMonth: '',
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -405,13 +413,15 @@ export default function App() {
   const [theme, setTheme]           = useState('light');
   const [words, setWords]           = useState([]);
   const [geminiKey, setGeminiKey]   = useState('');
-  const [tab, setTab]               = useState('home');   // home | categories | quiz | avocado
+  const [tab, setTab]               = useState('home');   // home | categories | quiz | avocado | leaderboard
   const [toast, setToast]           = useState('');
   const [sbUser, setSbUser]         = useState(null);    // Supabase user
   const [authMode, setAuthMode]     = useState('login'); // login | signup
   const [showAuth, setShowAuth]     = useState(true);    // Show auth screen
   const [loading, setLoading]       = useState(true);    // Loading auth state
   const [showSettings, setShowSettings] = useState(false); // Show settings modal
+  const [leaderboard, setLeaderboard] = useState({ streak: [], coins: [] });
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   // ── NEW: Categories & Avocado ──
   const [categories, setCategories]           = useState(DEFAULT_CATEGORIES);
@@ -421,79 +431,112 @@ export default function App() {
   const [profile, setProfile]                 = useState(INITIAL_PROFILE);
 
   const toastAnim                   = useRef(new Animated.Value(0)).current;
+  const profileRef                  = useRef(INITIAL_PROFILE);
+  const avocadoRef                  = useRef(INITIAL_AVOCADO);
   const T = theme === 'light' ? LIGHT : DARK;
 
   // ── boot ──
   useEffect(() => {
     (async () => {
+      let sessionUser = null;
       try {
-        // Check Supabase session
+        // 1. 세션 확인
         const { data: { session } } = await sbClient.auth.getSession();
         if (session?.user) {
+          sessionUser = session.user;
           setSbUser(session.user);
-          setShowAuth(false);
-          // Load words from Supabase
           const { data } = await sbClient.from('words').select('*').eq('user_id', session.user.id);
           if (data) setWords(data.map(r => ({
             id: r.id, word: r.word, pronunciation: r.pronunciation,
             type: r.type, meaning_ko: r.meaning_ko, meaning_en: r.meaning_en,
-            example: r.example, date: r.added_date, memorized: r.memorized
+            example: r.example, date: r.added_date, memorized: r.memorized,
           })));
         }
+
+        // 2. 로컬 데이터 로드
+        const [th, gk, catData, avoData, profData] = await Promise.all([
+          AsyncStorage.getItem(THEME_KEY),
+          AsyncStorage.getItem(GEMINI_KEY),
+          AsyncStorage.getItem(CATEGORIES_KEY),
+          AsyncStorage.getItem(AVOCADO_KEY),
+          AsyncStorage.getItem(PROFILE_KEY),
+        ]);
+
+        if (th) setTheme(th);
+        if (gk) setGeminiKey(gk);
+
+        if (catData) {
+          try {
+            const { customs } = JSON.parse(catData);
+            setCustomCategories(customs || []);
+          } catch (e) { console.log('Parse categories error:', e.message); }
+        }
+
+        if (avoData) {
+          try {
+            const avo = JSON.parse(avoData);
+            const todayStr = today();
+            const currentMonth = todayStr.slice(0, 7);
+
+            // 월별 리셋
+            if (!avo.leaderboardMonth || avo.leaderboardMonth !== currentMonth) {
+              avo.leaderboardMonth = currentMonth;
+              avo.monthlyCoinsEarned = 0;
+            }
+
+            // 연속 출석 계산
+            const isNewDay = (avo.lastLogin || '') !== todayStr;
+            if (isNewDay) {
+              const prev = new Date();
+              prev.setDate(prev.getDate() - 1);
+              const prevStr = prev.toISOString().slice(0, 10);
+              avo.streak = avo.lastStreakDate === prevStr ? (avo.streak || 0) + 1 : 1;
+              avo.lastStreakDate = todayStr;
+              avo.coins += 10;
+              avo.monthlyCoinsEarned = (avo.monthlyCoinsEarned || 0) + 10;
+              avo.dailyCoinsFromQuiz = 0;
+              avo.dailyCoinsFromWords = 0;
+              avo.lastLogin = todayStr;
+            } else if (!avo.lastStreakDate) {
+              avo.streak = 1;
+              avo.lastStreakDate = todayStr;
+            }
+
+            setAvocado(avo);
+            avocadoRef.current = avo;
+            await AsyncStorage.setItem(AVOCADO_KEY, JSON.stringify(avo));
+          } catch (e) { console.log('Parse avocado error:', e.message); }
+        }
+
+        if (profData) {
+          try {
+            const prof = JSON.parse(profData);
+            setProfile(prof);
+            profileRef.current = prof;
+          } catch (e) { console.log('Parse profile error:', e.message); }
+        }
+
+        // 3. 로그인 상태면 리더보드 upsert
+        if (sessionUser) {
+          const avo  = avocadoRef.current;
+          const prof = profileRef.current;
+          sbClient.from('leaderboard_monthly').upsert({
+            user_id:       sessionUser.id,
+            nickname:      prof.nickname || '익명',
+            photo:         prof.photo || '🥑',
+            photo_uri:     prof.photoUri || null,
+            streak:        avo.streak || 0,
+            monthly_coins: avo.monthlyCoinsEarned || 0,
+            month:         today().slice(0, 7),
+          }, { onConflict: 'user_id,month' })
+            .catch(e => console.warn('Boot leaderboard sync:', e));
+        }
       } catch (err) {
-        console.log('Auth check:', err.message);
+        console.log('Boot error:', err.message);
+      } finally {
+        // 어떤 경우에도 반드시 로딩 해제
+        setLoading(false);
       }
-
-      // Load local settings & data
-      const [th, gk, catData, avoData, profData] = await Promise.all([
-        AsyncStorage.getItem(THEME_KEY),
-        AsyncStorage.getItem(GEMINI_KEY),
-        AsyncStorage.getItem(CATEGORIES_KEY),
-        AsyncStorage.getItem(AVOCADO_KEY),
-        AsyncStorage.getItem(PROFILE_KEY),
-      ]);
-      if (th)  setTheme(th);
-      if (gk)  setGeminiKey(gk);
-
-      // Load categories
-      if (catData) {
-        try {
-          const { defaults, customs } = JSON.parse(catData);
-          setCustomCategories(customs || []);
-        } catch (e) {
-          console.log('Parse categories error:', e.message);
-        }
-      }
-
-      // Load avocado & apply daily bonus
-      if (avoData) {
-        try {
-          const avo = JSON.parse(avoData);
-          const lastLogin = avo.lastLogin || today();
-          const isNewDay = lastLogin !== today();
-          if (isNewDay) {
-            // Daily login bonus: +10 coins, reset daily counters
-            avo.coins += 10;
-            avo.dailyCoinsFromQuiz = 0;
-            avo.dailyCoinsFromWords = 0;
-            avo.lastLogin = today();
-          }
-          setAvocado(avo);
-        } catch (e) {
-          console.log('Parse avocado error:', e.message);
-        }
-      }
-
-      // Load profile
-      if (profData) {
-        try {
-          setProfile(JSON.parse(profData));
-        } catch (e) {
-          console.log('Parse profile error:', e.message);
-        }
-      }
-
-      setLoading(false);
     })();
   }, []);
 
@@ -551,11 +594,33 @@ export default function App() {
   // ── avocado ──
   const saveAvocado = useCallback(async (avo) => {
     setAvocado(avo);
+    avocadoRef.current = avo;
     await AsyncStorage.setItem(AVOCADO_KEY, JSON.stringify(avo));
-  }, []);
+    // Sync to leaderboard (fire-and-forget)
+    if (sbUser) {
+      const month = today().slice(0, 7);
+      const prof = profileRef.current;
+      sbClient.from('leaderboard_monthly').upsert({
+        user_id: sbUser.id,
+        nickname: prof.nickname || '익명',
+        photo: prof.photo || '🥑',
+        photo_uri: prof.photoUri || null,
+        streak: avo.streak || 0,
+        monthly_coins: avo.monthlyCoinsEarned || 0,
+        month,
+      }, { onConflict: 'user_id,month' }).catch(e => console.warn('Leaderboard sync:', e));
+    }
+  }, [sbUser]);
 
   const addCoins = useCallback((amount) => {
-    const updated = { ...avocado, coins: avocado.coins + amount };
+    const currentMonth = today().slice(0, 7);
+    const monthChanged = avocado.leaderboardMonth && avocado.leaderboardMonth !== currentMonth;
+    const updated = {
+      ...avocado,
+      coins: avocado.coins + amount,
+      monthlyCoinsEarned: monthChanged ? amount : (avocado.monthlyCoinsEarned || 0) + amount,
+      leaderboardMonth: currentMonth,
+    };
     saveAvocado(updated);
     return updated.coins;
   }, [avocado, saveAvocado]);
@@ -581,6 +646,7 @@ export default function App() {
   // ── profile ──
   const saveProfile = useCallback(async (prof) => {
     setProfile(prof);
+    profileRef.current = prof;
     await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(prof));
   }, []);
 
@@ -588,6 +654,34 @@ export default function App() {
     const updated = { ...profile, ...changes };
     saveProfile(updated);
   }, [profile, saveProfile]);
+
+  // ── leaderboard ──
+  const fetchLeaderboard = useCallback(async () => {
+    if (!sbUser) return;
+    const month = today().slice(0, 7);
+    setLeaderboardLoading(true);
+    try {
+      const [streakRes, coinsRes] = await Promise.all([
+        sbClient.from('leaderboard_monthly')
+          .select('user_id, nickname, photo, photo_uri, streak')
+          .eq('month', month)
+          .order('streak', { ascending: false })
+          .limit(100),
+        sbClient.from('leaderboard_monthly')
+          .select('user_id, nickname, photo, photo_uri, monthly_coins')
+          .eq('month', month)
+          .order('monthly_coins', { ascending: false })
+          .limit(100),
+      ]);
+      setLeaderboard({
+        streak: streakRes.data || [],
+        coins: coinsRes.data || [],
+      });
+    } catch (e) {
+      console.warn('Fetch leaderboard error:', e);
+    }
+    setLeaderboardLoading(false);
+  }, [sbUser]);
 
   // ── auth ──
   const doLogin = useCallback(async (email, pw) => {
@@ -602,6 +696,20 @@ export default function App() {
         type: r.type, meaning_ko: r.meaning_ko, meaning_en: r.meaning_en,
         example: r.example, date: r.added_date, memorized: r.memorized
       })));
+      // 로그인 직후 현재 avocado 데이터로 leaderboard 즉시 upsert
+      const avo  = avocadoRef.current;
+      const prof = profileRef.current;
+      const month = today().slice(0, 7);
+      sbClient.from('leaderboard_monthly').upsert({
+        user_id:       data.user.id,
+        nickname:      prof.nickname || '익명',
+        photo:         prof.photo || '🥑',
+        photo_uri:     prof.photoUri || null,
+        streak:        avo.streak || 0,
+        monthly_coins: avo.monthlyCoinsEarned || 0,
+        month,
+      }, { onConflict: 'user_id,month' })
+        .catch(e => console.warn('Login leaderboard sync:', e));
       showToast('로그인했어요!');
     } catch (err) {
       showToast(err.message || '로그인 실패');
@@ -625,17 +733,24 @@ export default function App() {
       setSbUser(null);
       setShowAuth(true);
       setWords([]);
-      showToast('로그아웃했어요.');
     } catch (err) {
       showToast(err.message || '로그아웃 실패');
     }
   }, []);
 
-  const skipAuth = useCallback(() => {
-    setShowAuth(false);
-    setSbUser(null);
-    showToast('로그인 없이 사용해요. (동기화 안됨)');
+  const doKakaoLogin = useCallback(async () => {
+    try {
+      const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const { error } = await sbClient.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: { redirectTo },
+      });
+      if (error) throw error;
+    } catch (err) {
+      showToast(err.message || '카카오 로그인 실패');
+    }
   }, []);
+
 
   // ── toast ──
   const showToast = useCallback((msg) => {
@@ -662,12 +777,14 @@ export default function App() {
   const ctx = {
     T, theme, toggleTheme, words, addWords, deleteWord, toggleMemorized,
     showToast, tab, setTab, geminiKey, saveGeminiKey,
-    sbUser, doLogout,
+    sbUser, doLogout, doKakaoLogin,
     // NEW: categories, avocado, profile
     categories, customCategories, selectedCategory, setSelectedCategory,
     addCategory, deleteCategory, renameCategory,
     avocado, addCoins, useCoins, careAvocado,
     profile, updateProfile, showSettings, setShowSettings,
+    // leaderboard
+    leaderboard, leaderboardLoading, fetchLeaderboard,
   };
 
   const toastStyle = {
@@ -682,20 +799,37 @@ export default function App() {
     <AppCtx.Provider value={ctx}>
       <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={T.navBg} />
       <View style={{ flex: 1, backgroundColor: T.bg }}>
-        {showAuth && !loading ? (
-          <AuthScreen email="" pw="" authMode={authMode} setAuthMode={setAuthMode} doLogin={doLogin} doSignup={doSignup} skipAuth={skipAuth} />
+
+        {/* 1. 앱 초기화 중 — 로딩 스피너 */}
+        {loading ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: T.bg }}>
+            <BookMarked size={36} color={T.warmBrown} strokeWidth={2} />
+            <Text style={{ marginTop: 16, fontSize: 13, color: T.ink3 }}>불러오는 중...</Text>
+          </View>
+
+        /* 2. 로그인 안 된 상태 — 항상 로그인 화면 */
+        ) : !sbUser ? (
+          <AuthScreen
+            email="" pw=""
+            authMode={authMode} setAuthMode={setAuthMode}
+            doLogin={doLogin} doSignup={doSignup} doKakaoLogin={doKakaoLogin}
+          />
+
+        /* 3. 로그인 완료 — 앱 */
         ) : (
           <>
             <TopBar />
             <View style={{ flex: 1 }}>
-              {tab === 'home'       && <AddScreen />}
-              {tab === 'categories' && <ListScreen />}
-              {tab === 'quiz'       && <QuizScreen />}
-              {tab === 'avocado'    && <AvocadoScreen />}
+              {tab === 'home'        && <AddScreen />}
+              {tab === 'categories'  && <ListScreen />}
+              {tab === 'quiz'        && <QuizScreen />}
+              {tab === 'avocado'     && <AvocadoScreen />}
+              {tab === 'leaderboard' && <LeaderboardScreen />}
             </View>
             <BottomNav />
           </>
         )}
+
         <Animated.View style={toastStyle} pointerEvents="none">
           <Text style={{ color: T.bg, fontSize: 13 }}>{toast}</Text>
         </Animated.View>
@@ -708,11 +842,12 @@ export default function App() {
 // ─────────────────────────────────────────────────────────────────
 //  AUTH SCREEN
 // ─────────────────────────────────────────────────────────────────
-function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipAuth }) {
+function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, doKakaoLogin }) {
   const { T } = useApp();
   const [em, setEm] = useState(email);
   const [p, setP] = useState(pw);
   const [loading, setLoading] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
 
   const handleAuth = async () => {
     if (!em.trim() || !p.trim()) { return; }
@@ -723,6 +858,12 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
       await doSignup(em, p);
     }
     setLoading(false);
+  };
+
+  const handleKakao = async () => {
+    setKakaoLoading(true);
+    await doKakaoLogin();
+    setKakaoLoading(false);
   };
 
   return (
@@ -779,7 +920,7 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
 
           <TouchableOpacity
             onPress={handleAuth}
-            disabled={loading}
+            disabled={loading || kakaoLoading}
             style={{ backgroundColor: T.warmBrown, borderRadius: 14, paddingVertical: 12, alignItems: 'center', opacity: loading ? 0.5 : 1 }}>
             <Text style={{ color: T.paper, fontSize: 14, fontWeight: '600' }}>
               {loading ? '처리 중...' : (authMode === 'login' ? '로그인' : '가입하기')}
@@ -787,11 +928,34 @@ function AuthScreen({ email, pw, authMode, setAuthMode, doLogin, doSignup, skipA
           </TouchableOpacity>
         </View>
 
-        <View style={{ alignItems: 'center', marginTop: 20 }}>
-          <TouchableOpacity onPress={skipAuth}>
-            <Text style={{ fontSize: 12, color: T.ink3 }}>로그인 없이 사용하기</Text>
-          </TouchableOpacity>
+        {/* 구분선 */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 12 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: T.rule2 }} />
+          <Text style={{ fontSize: 12, color: T.ink4 }}>또는</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: T.rule2 }} />
         </View>
+
+        {/* 카카오 로그인 */}
+        <TouchableOpacity
+          onPress={handleKakao}
+          disabled={loading || kakaoLoading}
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+            backgroundColor: '#FEE500', borderRadius: 14, paddingVertical: 13,
+            opacity: kakaoLoading ? 0.6 : 1,
+            shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.08, shadowRadius: 3, elevation: 1,
+          }}>
+          {/* 카카오 심볼 */}
+          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.85)',
+            alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 12, fontWeight: '900', color: '#FEE500', lineHeight: 14 }}>K</Text>
+          </View>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: 'rgba(0,0,0,0.85)' }}>
+            {kakaoLoading ? '연결 중...' : '카카오로 로그인'}
+          </Text>
+        </TouchableOpacity>
+
       </View>
     </ScrollView>
   );
@@ -857,10 +1021,11 @@ function TopBar() {
 function BottomNav() {
   const { T, tab, setTab } = useApp();
   const items = [
-    { key: 'home',       label: '홈',     Icon: Plus },
-    { key: 'categories', label: '단어장', Icon: Layers },
-    { key: 'quiz',       label: '퀴즈',   Icon: BrainCircuit },
-    { key: 'avocado',    label: '아보카도', Icon: Leaf },
+    { key: 'home',        label: '홈',      Icon: Plus },
+    { key: 'categories',  label: '단어장',  Icon: Layers },
+    { key: 'quiz',        label: '퀴즈',    Icon: BrainCircuit },
+    { key: 'avocado',     label: '아보카도', Icon: Leaf },
+    { key: 'leaderboard', label: '순위',    Icon: Trophy },
   ];
   return (
     <View style={{
@@ -1860,53 +2025,592 @@ function QuizScreen() {
 }
 
 // ─────────────────────────────────────────────────────────────────
+//  ROOM ASSETS — image sources for room items & backgrounds
+// ─────────────────────────────────────────────────────────────────
+
+const ITEM_IMAGES = {
+  // 캐릭터
+  char_avocado:           require('./assets/images/items/character/basic/basic character.png'),
+  char_avocado_uplifting: require('./assets/images/items/character/basic/basic uplifting.png'),
+  char_avocado_happy:     require('./assets/images/items/character/basic/basic happy.png'),
+  char_avocado_sad:       require('./assets/images/items/character/basic/basic sad.png'),
+  char_avocado_surprised: require('./assets/images/items/character/basic/basic surprised.png'),
+  // 가구 / 소품
+  sofa:    require('./assets/images/items/props/sofa.png'),
+  glasses: require('./assets/images/items/props/glasses.png'),
+  curtain: require('./assets/images/items/props/curtain.png'),
+  table:   require('./assets/images/items/props/table.png'),
+  tumbler: require('./assets/images/items/props/tumbler.png'),
+  // 배경
+  bg_default:   require('./assets/images/items/backgrounds/bg_default.png'),
+  background_2: require('./assets/images/items/backgrounds/background_2.jpg'),
+  background_3: require('./assets/images/items/backgrounds/background_3.jpg'),
+};
+
+// Item display sizes (width × height in dp) — 이전값의 2배
+const ITEM_SIZE = {
+  char_avocado: { w: 1120, h: 1232 },
+  curtain:      { w: 210, h: 250 },
+  sofa:         { w: 220, h: 148 },
+  table:        { w: 180, h: 126 },
+  glasses:      { w: 82,  h: 40  },
+  tumbler:      { w: 62,  h: 78  },
+};
+
+// All available room items (decoration drawer용)
+// 새 아이템 추가 시: ITEM_IMAGES / ITEM_SIZE 에 등록 후 이 배열에 추가
+const ALL_ROOM_ITEMS = [
+  { id: 'char_avocado', category: '캐릭터', label: '아보카도',  free: true },
+  { id: 'sofa',         category: '가구',   label: '소파',      free: true },
+  { id: 'table',        category: '가구',   label: '탁자',      free: true },
+  { id: 'curtain',      category: '가구',   label: '커튼',      free: true },
+  { id: 'glasses',      category: '가구',   label: '안경',      free: true },
+  { id: 'tumbler',      category: '가구',   label: '텀블러',    free: true },
+  { id: 'bg_default',   category: '배경',   label: '기본 배경',  free: true  },
+  { id: 'background_2', category: '배경',   label: '배경 2',     free: true  },
+  { id: 'background_3', category: '배경',   label: '배경 3',     free: false },
+];
+
+// 상점 카탈로그 — 탭별 상품 목록
+// 새 상품 추가 시: ITEM_IMAGES 에 이미지 등록 후 아래 배열에 추가
+const SHOP_CATALOG = {
+  캐릭터: [
+    { id: 'char_avocado', label: '아보카도',   price: 0,   desc: '기본 아보카도 캐릭터',  badge: '기본' },
+    { id: 'char2',        label: '눈멍이',     price: 120, desc: '순둥순둥 모습',          badge: 'NEW'  },
+    { id: 'char3',        label: '키위새',     price: 120, desc: '귀여운 친구',            badge: '인기' },
+    { id: 'char4',        label: '오독이',     price: 84,  desc: '통통한 아보카도',        badge: '추천' },
+  ],
+  가구: [
+    { id: 'sofa',         label: '소파',       price: 0,   desc: '포근한 초록 소파',       badge: '기본' },
+    { id: 'table',        label: '탁자',       price: 0,   desc: '원목 커피 테이블',       badge: '기본' },
+    { id: 'curtain',      label: '커튼',       price: 0,   desc: '아치형 창문 커튼',       badge: '기본' },
+    { id: 'glasses',      label: '안경',       price: 0,   desc: '동그란 귀여운 안경',     badge: '기본' },
+    { id: 'tumbler',      label: '텀블러',     price: 0,   desc: '친환경 텀블러',          badge: '기본' },
+    { id: 'room2',        label: '꽃향기 소파', price: 68, desc: '포근한 플로럴 소파',     badge: '할인' },
+    { id: 'room3',        label: '레트로 선반', price: 47, desc: '복고 감성 인테리어',     badge: '할인' },
+    { id: 'room4',        label: '핑크 쿠션',  price: 72,  desc: '달콤한 분위기',          badge: 'NEW'  },
+  ],
+  배경: [
+    { id: 'bg_default',   label: '기본 배경',  price: 0,   desc: '따뜻한 아보카도 방',     badge: '기본' },
+    { id: 'background_2', label: '배경 2',     price: 0,   desc: '새로운 무료 배경',        badge: '무료' },
+    { id: 'background_3', label: '배경 3',     price: 100, desc: '특별한 프리미엄 배경',    badge: 'NEW'  },
+    { id: 'building2',    label: '카페 하우스', price: 90, desc: '아늑한 카페 배경',       badge: '추천' },
+    { id: 'building3',    label: '숲속 오두막', price: 120, desc: '자연 속 힐링 공간',     badge: '인기' },
+    { id: 'building4',    label: '루프탑',     price: 110, desc: '하늘을 바라보는 공간',   badge: 'NEW'  },
+  ],
+};
+
+// Render a room item thumbnail (used in drawer)
+function RoomItemThumb({ itemId }) {
+  const src = ITEM_IMAGES[itemId];
+  if (!src) return <Text style={{ fontSize: 24 }}>🎁</Text>;
+  return <Image source={src} style={{ width: 56, height: 56 }} resizeMode="contain" />;
+}
+
+// Draggable placed-item wrapper
+// - 짧은 드래그(>4px 이동): 위치 이동
+// - 제자리에서 600ms 유지: 제거
+function DraggableRoomItem({ placedItem, onUpdatePosition, onRemove }) {
+  const size     = ITEM_SIZE[placedItem.itemId] || { w: 80, h: 80 };
+  const src      = ITEM_IMAGES[placedItem.itemId];
+  const pan      = useRef(new Animated.ValueXY({ x: placedItem.x, y: placedItem.y })).current;
+  const cbRef    = useRef({ onUpdatePosition, onRemove });
+  const dragging = useRef(false);
+  const longPressTimer = useRef(null);
+  cbRef.current = { onUpdatePosition, onRemove };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 4 || Math.abs(gs.dy) > 4,
+
+      onPanResponderGrant: () => {
+        dragging.current = false;
+        pan.setOffset({ x: pan.x._value, y: pan.y._value });
+        pan.setValue({ x: 0, y: 0 });
+        // 롱프레스 타이머 시작
+        longPressTimer.current = setTimeout(() => {
+          if (!dragging.current) cbRef.current.onRemove(placedItem.id);
+        }, 650);
+      },
+
+      onPanResponderMove: (_, gs) => {
+        if (Math.abs(gs.dx) > 4 || Math.abs(gs.dy) > 4) {
+          dragging.current = true;
+          clearTimeout(longPressTimer.current);
+        }
+        pan.setValue({ x: gs.dx, y: gs.dy });
+      },
+
+      onPanResponderRelease: () => {
+        clearTimeout(longPressTimer.current);
+        pan.flattenOffset();
+        cbRef.current.onUpdatePosition(placedItem.id, pan.x._value, pan.y._value);
+      },
+
+      onPanResponderTerminate: () => {
+        clearTimeout(longPressTimer.current);
+        pan.flattenOffset();
+      },
+    })
+  ).current;
+
+  if (!src) return null;
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        transform: [{ translateX: pan.x }, { translateY: pan.y }],
+        zIndex: dragging.current ? 30 : 20,
+      }}
+      {...panResponder.panHandlers}>
+      <Image source={src} style={{ width: size.w, height: size.h }} resizeMode="contain" />
+    </Animated.View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  LEADERBOARD SCREEN
+// ─────────────────────────────────────────────────────────────────
+function LeaderboardScreen() {
+  const { T, sbUser, avocado, profile, leaderboard, leaderboardLoading, fetchLeaderboard } = useApp();
+  const [rankTab, setRankTab] = useState('streak'); // 'streak' | 'coins'
+
+  useEffect(() => { fetchLeaderboard(); }, []);
+
+  const currentMonth = today().slice(0, 7);
+  const monthLabel = (() => {
+    const [y, m] = currentMonth.split('-');
+    return `${y}년 ${parseInt(m)}월`;
+  })();
+
+  const data = rankTab === 'streak' ? leaderboard.streak : leaderboard.coins;
+
+  function RankRow({ item, index }) {
+    const isMe = sbUser && item.user_id === sbUser.id;
+    const rankColors = ['#c9a227', '#9aa4b2', '#b87333'];
+    const rankBg     = index < 3 ? (rankColors[index] + '22') : 'transparent';
+    const rankNumColor = index < 3 ? rankColors[index] : T.ink3;
+
+    return (
+      <View style={{
+        flexDirection: 'row', alignItems: 'center',
+        paddingVertical: 12, paddingHorizontal: 16,
+        backgroundColor: isMe ? T.brownBg : rankBg,
+        borderRadius: 16,
+        borderWidth: isMe ? 1.5 : 0,
+        borderColor: isMe ? T.warmBrown : 'transparent',
+        marginBottom: 8,
+      }}>
+        {/* 등수 */}
+        <View style={{ width: 32, alignItems: 'center' }}>
+          {index < 3 ? (
+            <Text style={{ fontSize: 18 }}>
+              {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+            </Text>
+          ) : (
+            <Text style={{ fontSize: 14, fontWeight: '700', color: rankNumColor }}>
+              {index + 1}
+            </Text>
+          )}
+        </View>
+
+        {/* 프로필 */}
+        <View style={{ width: 40, height: 40, borderRadius: 20, marginHorizontal: 12,
+          backgroundColor: T.paper2, alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden', borderWidth: 1.5, borderColor: isMe ? T.warmBrown : T.rule2 }}>
+          {item.photo_uri ? (
+            <Image source={{ uri: item.photo_uri }} style={{ width: 40, height: 40 }} resizeMode="cover" />
+          ) : (
+            <Text style={{ fontSize: 20 }}>{item.photo || '🥑'}</Text>
+          )}
+        </View>
+
+        {/* 닉네임 + 수치 */}
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: isMe ? '700' : '500', color: T.ink }} numberOfLines={1}>
+            {item.nickname || '익명'}{isMe ? ' (나)' : ''}
+          </Text>
+          <Text style={{ fontSize: 12, color: T.ink3, marginTop: 2 }}>
+            {rankTab === 'streak'
+              ? `🔥 ${item.streak ?? 0}일 연속`
+              : `🪙 ${item.monthly_coins ?? 0} 코인`}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!sbUser) {
+    return (
+      <View style={{ flex: 1, backgroundColor: T.bg, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <Trophy size={48} color={T.ink4} strokeWidth={1.5} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: T.ink, marginTop: 16, marginBottom: 8 }}>리더보드</Text>
+        <Text style={{ fontSize: 13, color: T.ink3, textAlign: 'center', lineHeight: 20 }}>
+          로그인하면 다른 사용자와{'\n'}순위를 비교할 수 있어요.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: T.bg }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {/* 헤더 */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <Trophy size={22} color={T.warmBrown} strokeWidth={2} />
+          <Text style={{ fontSize: 20, fontWeight: '700', color: T.ink }}>리더보드</Text>
+        </View>
+        <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 16 }}>
+          {monthLabel} 기준 · 매달 1일 초기화
+        </Text>
+
+        {/* 내 현황 카드 */}
+        <View style={{ backgroundColor: T.paper, borderRadius: 20, borderWidth: 2, borderColor: T.olive,
+          padding: 16, marginBottom: 16, flexDirection: 'row', gap: 12 }}>
+          <View style={{ flex: 1, alignItems: 'center', backgroundColor: T.brownBg,
+            borderRadius: 14, padding: 12 }}>
+            <Text style={{ fontSize: 11, color: T.ink3 }}>이번 달 연속 출석</Text>
+            <Text style={{ fontSize: 26, fontWeight: '700', color: T.warmBrown, marginTop: 4 }}>
+              {avocado.streak || 0}
+            </Text>
+            <Text style={{ fontSize: 11, color: T.ink3 }}>일</Text>
+          </View>
+          <View style={{ flex: 1, alignItems: 'center', backgroundColor: T.brownBg,
+            borderRadius: 14, padding: 12 }}>
+            <Text style={{ fontSize: 11, color: T.ink3 }}>이번 달 획득 코인</Text>
+            <Text style={{ fontSize: 26, fontWeight: '700', color: T.warmBrown, marginTop: 4 }}>
+              {avocado.monthlyCoinsEarned || 0}
+            </Text>
+            <Text style={{ fontSize: 11, color: T.ink3 }}>🪙</Text>
+          </View>
+        </View>
+
+        {/* 탭 선택 */}
+        <View style={{ flexDirection: 'row', backgroundColor: T.paper2, borderRadius: 14,
+          padding: 3, marginBottom: 16, borderWidth: 1, borderColor: T.rule2 }}>
+          {[
+            { key: 'streak', label: '🔥 연속 출석 순위' },
+            { key: 'coins',  label: '🪙 코인 획득 순위' },
+          ].map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => setRankTab(key)}
+              style={{ flex: 1, paddingVertical: 9, borderRadius: 11,
+                backgroundColor: rankTab === key ? T.paper : 'transparent',
+                alignItems: 'center' }}>
+              <Text style={{ fontSize: 12, fontWeight: rankTab === key ? '700' : '400',
+                color: rankTab === key ? T.ink : T.ink3 }}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* 순위 리스트 */}
+        {leaderboardLoading ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, color: T.ink3 }}>불러오는 중...</Text>
+          </View>
+        ) : data.length === 0 ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <Text style={{ fontSize: 32, marginBottom: 8 }}>🌱</Text>
+            <Text style={{ fontSize: 14, color: T.ink3 }}>아직 기록이 없어요</Text>
+          </View>
+        ) : (
+          data.map((item, i) => <RankRow key={item.user_id} item={item} index={i} />)
+        )}
+
+        {/* 새로고침 버튼 */}
+        <TouchableOpacity
+          onPress={fetchLeaderboard}
+          style={{ marginTop: 12, alignSelf: 'center', paddingHorizontal: 20, paddingVertical: 10,
+            borderRadius: 20, borderWidth: 1, borderColor: T.rule2, backgroundColor: T.paper }}>
+          <Text style={{ fontSize: 12, color: T.ink3 }}>새로고침</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 //  AVOCADO SCREEN
 // ─────────────────────────────────────────────────────────────────
 function AvocadoScreen() {
-  const { T, avocado, useCoins, careAvocado, showToast, profile } = useApp();
+  const { T, avocado, useCoins, careAvocado, showToast, profile, sbUser } = useApp();
   const [viewMode, setViewMode] = useState('home');
   const [storeTab, setStoreTab] = useState('캐릭터');
-  const [ownedItems, setOwnedItems] = useState(['char1', 'room1', 'building1']);
+  const [ownedItems, setOwnedItems] = useState([
+    'char1', 'room1', 'building1', 'char_avocado', 'bg_default',
+  ]);
+  const [wateringCanCount, setWateringCanCount] = useState(0);
   const [equipped, setEquipped] = useState({ 캐릭터: 'char1', 방: 'room1', 건물: 'building1' });
+
+  // 캐릭터 상태 & 애니메이션
+  const [charState, setCharState] = useState('idle'); // idle | uplifting | happy | sad | surprised
+  const charStateTimer = useRef(null);
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef(null);
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  const bounceLoop = useRef(null);
+
+  const startBounce = () => {
+    if (bounceLoop.current) bounceLoop.current.stop();
+    bounceAnim.setValue(0);
+    bounceLoop.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, { toValue: -10, duration: 250, useNativeDriver: true }),
+        Animated.timing(bounceAnim, { toValue: 0,   duration: 250, useNativeDriver: true }),
+      ])
+    );
+    bounceLoop.current.start();
+  };
+
+  const stopBounce = () => {
+    if (bounceLoop.current) { bounceLoop.current.stop(); bounceLoop.current = null; }
+    Animated.timing(bounceAnim, { toValue: 0, duration: 100, useNativeDriver: true }).start();
+  };
+
+  const triggerCharState = (state, duration = 2000) => {
+    clearTimeout(charStateTimer.current);
+    setCharState(state);
+    startBounce();
+    charStateTimer.current = setTimeout(() => {
+      setCharState('idle');
+      stopBounce();
+    }, duration);
+  };
+
+  // Lottie 애니메이션 참조
+  const lottieRef = useRef(null);
+
+  const handleCharacterTap = () => {
+    // 애니메이션 재생
+    if (lottieRef.current) {
+      lottieRef.current.play();
+    }
+    
+    tapCountRef.current += 1;
+    clearTimeout(tapTimerRef.current);
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      triggerCharState(Math.random() < 0.5 ? 'sad' : 'surprised');
+    } else {
+      triggerCharState('uplifting');
+      tapTimerRef.current = setTimeout(() => { tapCountRef.current = 0; }, 600);
+    }
+  };
   const [search, setSearch] = useState('');
   const [discountOnly, setDiscountOnly] = useState(false);
+
+  // Room decoration state
+  const [roomBg, setRoomBg] = useState('bg_default');
+  const [roomLayout, setRoomLayout] = useState({ w: 360, h: 480 });
+
+  // 캐릭터 고정 위치 + 크기 계산 (방 크기에 비례한 responsive 사이징)
+  // 방 너비의 65%를 캐릭터 너비로 사용, 세로는 비율 유지
+  const charFixedPos = (rw, rh, itemId) => {
+    const base = ITEM_SIZE[itemId] || { w: 280, h: 308 };
+    const w = Math.round(rw * 0.40);
+    const h = Math.round(w * (base.h / base.w));
+    return {
+      x: Math.round((rw - w) / 2),
+      y: Math.round(rh * 0.58),
+      w,
+      h,
+    };
+  };
+
+  // 로드된 배치 목록에서 캐릭터 좌표를 항상 고정값으로 덮어씀
+  const enforceCharPositions = (items, rw, rh) =>
+    items.map(item => {
+      const meta = ALL_ROOM_ITEMS.find(i => i.id === item.itemId);
+      if (meta?.category === '캐릭터') {
+        return { ...item, ...charFixedPos(rw, rh, item.itemId) };
+      }
+      return item;
+    });
+
+  // 방 크기 기반 초기 배치 계산 — 캐릭터만
+  const makeInitialItems = (rw, rh) => {
+    const av = charFixedPos(rw, rh, 'char_avocado');
+    return [
+      { id: 'pi_avocado', itemId: 'char_avocado', ...av },
+    ];
+  };
+
+  const [placedItems, setPlacedItems] = useState(() => makeInitialItems(360, 480));
+  const layoutInitialized = useRef(false);
+  const saveTimer = useRef(null);
+
+  // ── 방 상태 저장 키
+  const ROOM_STATE_KEY = 'myvocab_room_state';
+
+  // 구매제 전환 전 자동 지급된 소품 목록 — 로드 시 소장/배치에서 제거
+  const LEGACY_FREE_PROPS = ['sofa', 'table', 'curtain', 'glasses', 'tumbler'];
+
+  const migratePlaced = (items, rw, rh) => {
+    const cleaned = items.filter(p => !LEGACY_FREE_PROPS.includes(p.itemId));
+    const hasChar = cleaned.some(p => {
+      const meta = ALL_ROOM_ITEMS.find(i => i.id === p.itemId);
+      return meta?.category === '캐릭터';
+    });
+    const base = hasChar ? cleaned : [...cleaned, ...makeInitialItems(rw, rh)];
+    return enforceCharPositions(base, rw, rh);
+  };
+
+  const migrateOwned = (items) =>
+    items.filter(id => !LEGACY_FREE_PROPS.includes(id));
+
+  // ── Supabase or AsyncStorage 로드
+  const loadRoomState = useCallback(async (rw, rh) => {
+    try {
+      if (sbUser) {
+        const { data } = await sbClient
+          .from('user_room_state')
+          .select('room_bg, placed_items, owned_items')
+          .eq('user_id', sbUser.id)
+          .maybeSingle();
+        if (data) {
+          if (data.room_bg) setRoomBg(data.room_bg);
+          if (Array.isArray(data.placed_items) && data.placed_items.length > 0)
+            setPlacedItems(migratePlaced(data.placed_items, rw, rh));
+          else
+            setPlacedItems(makeInitialItems(rw, rh));
+          if (Array.isArray(data.owned_items) && data.owned_items.length > 0)
+            setOwnedItems(migrateOwned(data.owned_items));
+          if (typeof data.watering_can_count === 'number')
+            setWateringCanCount(data.watering_can_count);
+          return;
+        }
+      }
+      // 비로그인 또는 Supabase에 데이터 없음 → AsyncStorage
+      const saved = await AsyncStorage.getItem(ROOM_STATE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.roomBg) setRoomBg(parsed.roomBg);
+        const rawPlaced = Array.isArray(parsed.placedItems) ? parsed.placedItems : [];
+        setPlacedItems(migratePlaced(rawPlaced, rw, rh));
+        if (Array.isArray(parsed.ownedItems) && parsed.ownedItems.length > 0)
+          setOwnedItems(migrateOwned(parsed.ownedItems));
+        if (typeof parsed.wateringCanCount === 'number')
+          setWateringCanCount(parsed.wateringCanCount);
+      } else {
+        setPlacedItems(makeInitialItems(rw, rh));
+      }
+    } catch (e) {
+      console.warn('loadRoomState error:', e);
+    }
+  }, [sbUser]);
+
+  // ── 저장 (변경 후 1.5초 debounce)
+  const persistRoomState = useCallback((bg, items, owned, canCount) => {
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        if (sbUser) {
+          await sbClient.from('user_room_state').upsert({
+            user_id: sbUser.id,
+            room_bg: bg,
+            placed_items: items,
+            owned_items: owned,
+            watering_can_count: canCount,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+        } else {
+          await AsyncStorage.setItem(ROOM_STATE_KEY,
+            JSON.stringify({ roomBg: bg, placedItems: items, ownedItems: owned, wateringCanCount: canCount }));
+        }
+      } catch (e) {
+        console.warn('persistRoomState error:', e);
+      }
+    }, 1500);
+  }, [sbUser]);
+
+  // ── 방 레이아웃 측정 후 첫 1회: 실제 크기로 재계산 + 저장된 상태 로드
+  const onRoomLayout = useCallback((e) => {
+    if (layoutInitialized.current) return;
+    layoutInitialized.current = true;
+    const { width: rw, height: rh } = e.nativeEvent.layout;
+    setRoomLayout({ w: rw, h: rh });
+    loadRoomState(rw, rh);
+  }, [loadRoomState]);
+
+  // ── 로그인/로그아웃 시 방 상태 재로드
+  useEffect(() => {
+    if (layoutInitialized.current) {
+      loadRoomState(roomLayout.w, roomLayout.h);
+    }
+  }, [sbUser]);
+
+  // ── 상태 변경 시 자동 저장
+  useEffect(() => {
+    persistRoomState(roomBg, placedItems, ownedItems, wateringCanCount);
+  }, [roomBg, placedItems, ownedItems, wateringCanCount]);
+  const [showDecorDrawer, setShowDecorDrawer] = useState(false);
+  const [decorTab, setDecorTab] = useState('가구');
+  const drawerAnim = useRef(new Animated.Value(0)).current;
+
+  const openDrawer = () => {
+    setShowDecorDrawer(true);
+    Animated.spring(drawerAnim, { toValue: 1, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
+  };
+  const closeDrawer = () => {
+    Animated.spring(drawerAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start(() => setShowDecorDrawer(false));
+  };
+
+  const addItemToRoom = (itemId) => {
+    const itemData = ALL_ROOM_ITEMS.find(i => i.id === itemId);
+    // 배경은 교체
+    if (itemData?.category === '배경') {
+      setRoomBg(itemId);
+      showToast('배경을 변경했어요');
+      closeDrawer();
+      return;
+    }
+    const already = placedItems.find(p => p.itemId === itemId);
+    if (already) { showToast('이미 배치되어 있어요'); return; }
+    const newId = `pi_${itemId}_${Date.now()}`;
+    // 캐릭터는 항상 고정 위치 (bottom 40%, 수평 중앙)
+    const pos = itemData?.category === '캐릭터'
+      ? charFixedPos(roomLayout.w, roomLayout.h, itemId)
+      : { x: Math.round(roomLayout.w * 0.10), y: Math.round(roomLayout.h * 0.50) };
+    setPlacedItems(prev => [...prev, { id: newId, itemId, ...pos }]);
+    showToast(itemData?.category === '캐릭터' ? '캐릭터를 배치했어요!' : '방에 배치했어요! 드래그해서 이동하세요');
+    closeDrawer();
+  };
+  const updateItemPosition = (id, x, y) => {
+    setPlacedItems(prev => prev.map(p => p.id === id ? { ...p, x, y } : p));
+  };
+  const removeItemFromRoom = (id) => {
+    setPlacedItems(prev => prev.filter(p => p.id !== id));
+    showToast('아이템을 제거했어요');
+  };
+
+  const decorTabs = ['캐릭터', '가구', '배경'];
+  const decorItems = ALL_ROOM_ITEMS.filter(item => item.category === decorTab && ownedItems.includes(item.id));
 
   const caresUntilNextLevel = avocado.level === 1 ? 25 : (avocado.level === 2 ? 50 : 999);
   const caresNeeded = Math.max(caresUntilNextLevel - avocado.totalCares, 0);
   const nextLevelPercent = Math.min((avocado.totalCares / caresUntilNextLevel) * 100, 100);
 
-  const storeTabs = ['캐릭터', '방', '건물'];
-  const storeItems = {
-    캐릭터: [
-      { id: 'char1', title: '기본 캐릭터', price: 0, coin: '코인', desc: '따뜻한 기본 아보카도', badge: '기본' },
-      { id: 'char2', title: '눈멍이', price: 120, coin: '🪙', desc: '순둥순둥 모습', badge: 'NEW' },
-      { id: 'char3', title: '키위새', price: 120, coin: '🪙', desc: '귀여운 친구', badge: '인기' },
-      { id: 'char4', title: '오독이', price: 84, coin: '🪙', desc: '통통한 아보카도', badge: '추천' },
-    ],
-    방: [
-      { id: 'room1', title: '파란 방', price: 0, coin: '코인', desc: '기본 방', badge: '기본' },
-      { id: 'room2', title: '꽃향기 방', price: 68, coin: '🪙', desc: '포근한 플로럴', badge: '할인' },
-      { id: 'room3', title: '레트로 방', price: 47, coin: '🪙', desc: '복고 감성', badge: '할인' },
-      { id: 'room4', title: '핑크 방', price: 72, coin: '🪙', desc: '달콤한 분위기', badge: 'NEW' },
-    ],
-    건물: [
-      { id: 'building1', title: '작은 집', price: 0, coin: '코인', desc: '아보카도의 보금자리', badge: '기본' },
-      { id: 'building2', title: '카페 하우스', price: 90, coin: '🪙', desc: '아늑한 카페', badge: '추천' },
-      { id: 'building3', title: '숲 속 오두막', price: 120, coin: '🪙', desc: '자연 속 힐링', badge: '인기' },
-      { id: 'building4', title: '루프탑', price: 110, coin: '🪙', desc: '하늘을 바라보는 공간', badge: 'NEW' },
-    ],
-  };
+  const storeTabs = ['캐릭터', '가구', '배경'];
 
-  const currentChar = storeItems.캐릭터.find(item => item.id === equipped.캐릭터);
-  const currentRoom = storeItems.방.find(item => item.id === equipped.방);
-  const currentBuilding = storeItems.건물.find(item => item.id === equipped.건물);
+  const owned = (id) => ownedItems.includes(id);
 
-  const owned = (item) => ownedItems.includes(item.id);
   const handlePurchase = (item) => {
-    const alreadyOwned = owned(item);
-    if (alreadyOwned) {
-      setEquipped(prev => ({ ...prev, [storeTab]: item.id }));
-      showToast('✔️ 착용 완료');
+    if (item.id === 'watering_can') {
+      if (!useCoins(50)) { showToast('코인이 부족해요'); return; }
+      setWateringCanCount(prev => prev + 1);
+      showToast('✅ 물뿌리개 구매 완료! 아보카도에게 물을 줘보세요 🪣');
+      return;
+    }
+    if (owned(item.id)) {
+      if (storeTab === '배경' && ITEM_IMAGES[item.id]) {
+        setRoomBg(item.id);
+        showToast('✔️ 배경 적용 완료');
+      } else {
+        showToast('이미 보유 중이에요');
+      }
       return;
     }
     if (item.price > 0 && !useCoins(item.price)) {
@@ -1914,13 +2618,12 @@ function AvocadoScreen() {
       return;
     }
     setOwnedItems(prev => [...prev, item.id]);
-    setEquipped(prev => ({ ...prev, [storeTab]: item.id }));
-    showToast(`✅ ${item.title} 구매 성공`);
+    showToast(`✅ ${item.label} 구매 완료! 🎨 버튼으로 방에 배치하세요`);
   };
 
-  const items = storeItems[storeTab].filter(item => {
+  const shopItems = (SHOP_CATALOG[storeTab] || []).filter(item => {
     const keyword = search.trim().toLowerCase();
-    const matches = item.title.toLowerCase().includes(keyword) || item.desc.toLowerCase().includes(keyword);
+    const matches = item.label.toLowerCase().includes(keyword) || item.desc.toLowerCase().includes(keyword);
     return matches && (!discountOnly || item.badge === '할인');
   });
 
@@ -1943,9 +2646,26 @@ function AvocadoScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        <View style={{ backgroundColor: T.paper, borderRadius: 24, padding: 18, borderWidth: 2, borderColor: T.olive, marginBottom: 16, shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1 }}>
+        <View style={{ backgroundColor: T.paper, borderRadius: 24, padding: 18, borderWidth: 2, borderColor: T.olive, marginBottom: 12, shadowColor: T.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1 }}>
           <Text style={{ fontSize: 14, color: T.ink3, marginBottom: 8 }}>보유 코인</Text>
           <Text style={{ fontSize: 28, fontWeight: '800', color: T.warmBrown }}>{avocado.coins} 🪙</Text>
+        </View>
+
+        {/* 물뿌리개 구매 카드 */}
+        <View style={{ backgroundColor: '#e8f5e4', borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: '#b8dcb0', marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#d0edca', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 30 }}>🪣</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: T.ink, marginBottom: 2 }}>물뿌리개</Text>
+            <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 6 }}>아보카도에게 물을 줘서 성장시켜요</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: T.warmBrown }}>50 🪙 · 보유 {wateringCanCount}개</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handlePurchase({ id: 'watering_can', label: '물뿌리개', price: 50 })}
+            style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: T.warmBrown, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>구매</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
@@ -1982,32 +2702,49 @@ function AvocadoScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: T.ink }}>추천 아이템</Text>
-          <Text style={{ fontSize: 12, color: T.ink3 }}>{items.length}개</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: T.ink }}>아이템 목록</Text>
+          <Text style={{ fontSize: 12, color: T.ink3 }}>{shopItems.length}개</Text>
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
-          {items.map(item => {
-            const alreadyOwned = owned(item);
-            const equippedItem = equipped[storeTab] === item.id;
+          {shopItems.map(item => {
+            const alreadyOwned = owned(item.id);
+            const hasImg = !!ITEM_IMAGES[item.id];
+            const isBg   = storeTab === '배경';
+            const isActiveBg = isBg && roomBg === item.id;
             return (
-              <View key={item.id} style={{ width: '48%', backgroundColor: T.paper, borderRadius: 20, borderWidth: 1, borderColor: T.rule2, padding: 14 }}>
+              <View key={item.id} style={{ width: '48%', backgroundColor: T.paper, borderRadius: 20, borderWidth: 1.5, borderColor: alreadyOwned ? T.brownBorder : T.rule2, padding: 14 }}>
                 {renderBadge(item.badge)}
-                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 8 }}>{item.price > 0 ? `${item.price}${item.coin}` : '무료'}</Text>
-                <View style={{ height: 100, borderRadius: 18, backgroundColor: '#f0f5ed', marginBottom: 12, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 30 }}>{storeTab === '캐릭터' ? '😊' : storeTab === '방' ? '🛋️' : '🏠'}</Text>
+                <Text style={{ fontSize: 12, color: T.ink3, marginBottom: 8 }}>
+                  {item.price > 0 ? `${item.price} 🪙` : '무료'}
+                </Text>
+                {/* 아이템 미리보기 */}
+                <View style={{ height: 100, borderRadius: 16, backgroundColor: '#f0f5ed', marginBottom: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {hasImg ? (
+                    <Image
+                      source={ITEM_IMAGES[item.id]}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 34 }}>
+                      {storeTab === '캐릭터' ? '🥑' : storeTab === '가구' ? '🛋️' : '🏠'}
+                    </Text>
+                  )}
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: T.ink, marginBottom: 4 }}>{item.title}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: T.ink, marginBottom: 4 }}>{item.label}</Text>
                 <Text style={{ fontSize: 11, color: T.ink3, marginBottom: 12 }}>{item.desc}</Text>
                 <TouchableOpacity
                   onPress={() => handlePurchase(item)}
                   style={{
-                    backgroundColor: alreadyOwned ? (equippedItem ? T.greenBg : T.brownBg) : T.warmBrown,
-                    paddingVertical: 12, borderRadius: 14, alignItems: 'center', borderWidth: 1,
-                    borderColor: alreadyOwned ? (equippedItem ? T.greenBorder : T.brownBorder) : T.warmBrown,
+                    paddingVertical: 12, borderRadius: 14, alignItems: 'center', borderWidth: 1.5,
+                    backgroundColor: isActiveBg ? T.greenBg : alreadyOwned ? T.brownBg : T.warmBrown,
+                    borderColor:     isActiveBg ? '#7ab870'  : alreadyOwned ? T.brownBorder : T.warmBrown,
                   }}>
-                  <Text style={{ color: alreadyOwned ? (equippedItem ? T.green : T.ink) : T.paper, fontWeight: '700' }}>
-                    {alreadyOwned ? (equippedItem ? '착용중' : '착용') : `구매 ${item.price}🪙`}
+                  <Text style={{ fontWeight: '700', color: isActiveBg ? '#4a8a40' : alreadyOwned ? T.warmBrown : '#fff' }}>
+                    {isActiveBg   ? '✔ 적용 중'
+                    : alreadyOwned ? (isBg ? '배경 적용' : '보유 중')
+                    : `구매 ${item.price}🪙`}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -2033,235 +2770,218 @@ function AvocadoScreen() {
     );
   }
 
-  // 캐릭터 이모지 매핑
-  const charEmoji = { char1: '🥑', char2: '🐻', char3: '🐦', char4: '🦊' };
-  const displayChar = charEmoji[equipped.캐릭터] || '🥑';
-
   return (
-    <View style={{ flex: 1, backgroundColor: T.bg }}>
+    <View style={{ flex: 1 }}>
 
-      {/* ── 상단 상태바 ── */}
-      <View style={{
-        flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, gap: 10,
-      }}>
-        {/* 아바타 */}
-        <View style={{
-          width: 44, height: 44, borderRadius: 22,
-          backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown,
-          alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-        }}>
-          {profile?.photoUri
-            ? <Image source={{ uri: profile.photoUri }} style={{ width: 44, height: 44 }} resizeMode="cover" />
-            : <Text style={{ fontSize: 22 }}>{profile?.photo || '🥑'}</Text>
+      {/* ── 전체 화면 방 (배경이 상태바까지 덮음) ── */}
+      <View
+        onLayout={onRoomLayout}
+        style={{ flex: 1, overflow: 'hidden' }}>
+
+        {/* 배경 이미지 — 전체 화면 cover */}
+        <Image
+          source={ITEM_IMAGES[roomBg] || ITEM_IMAGES.bg_default}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+
+        {/* 배치된 아이템들 — 캐릭터: 고정 위치 정적 렌더, 나머지: 드래그 가능 */}
+        {placedItems.map(item => {
+          const meta = ALL_ROOM_ITEMS.find(i => i.id === item.itemId);
+          if (meta?.category === '캐릭터') {
+            const pos = charFixedPos(roomLayout.w, roomLayout.h, item.itemId);
+            const stateKey = charState === 'idle' ? item.itemId
+              : charState === 'uplifting'  ? 'char_avocado_uplifting'
+              : charState === 'happy'      ? 'char_avocado_happy'
+              : charState === 'sad'        ? 'char_avocado_sad'
+              : 'char_avocado_surprised';
+            const src = ITEM_IMAGES[stateKey] || ITEM_IMAGES[item.itemId];
+            if (!src) return null;
+            return (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={1}
+                onPress={handleCharacterTap}
+                style={{ position: 'absolute', left: pos.x, top: pos.y, width: pos.w, height: pos.h, zIndex: 10 }}>
+                <Animated.View style={{ flex: 1, transform: [{ translateY: bounceAnim }] }}>
+                  <LottieView
+                    ref={lottieRef}
+                    source={require('./assets/images/items/character/basic/Animation-1.json')}
+                    autoPlay={false}
+                    loop={false}
+                    style={{ width: pos.w, height: pos.h }}
+                  />
+                  <Image
+                    source={src}
+                    style={{ position: 'absolute', width: pos.w, height: pos.h, top: 0, left: 0 }}
+                    resizeMode="contain"
+                  />
+                </Animated.View>
+              </TouchableOpacity>
+            );
           }
-        </View>
+          return (
+            <DraggableRoomItem
+              key={item.id}
+              placedItem={item}
+              onUpdatePosition={updateItemPosition}
+              onRemove={removeItemFromRoom}
+            />
+          );
+        })}
 
-        {/* 닉네임 + 레벨바 */}
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: T.ink }}>
-              {profile?.nickname || '나의 아보카도'}
-            </Text>
-            <View style={{
-              backgroundColor: T.brownBg, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
-            }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: T.warmBrown }}>Lv.{avocado.level}</Text>
+        {/* ── 상단 상태바 오버레이 ── */}
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: T.brownBg, borderWidth: 2, borderColor: T.warmBrown, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {profile?.photoUri
+                ? <Image source={{ uri: profile.photoUri }} style={{ width: 40, height: 40 }} resizeMode="cover" />
+                : <Text style={{ fontSize: 20 }}>{profile?.photo || '🥑'}</Text>
+              }
             </View>
-            <Text style={{ fontSize: 11, color: T.warmBrown, fontWeight: '600', marginLeft: 'auto' }}>
-              {avocado.coins} 🪙
-            </Text>
-          </View>
-          {/* 경험치 바 */}
-          <View style={{ height: 5, backgroundColor: T.paper2, borderRadius: 3, overflow: 'hidden' }}>
-            <View style={{
-              width: `${nextLevelPercent}%`, height: '100%',
-              backgroundColor: T.green, borderRadius: 3,
-            }} />
-          </View>
-          <Text style={{ fontSize: 9, color: T.ink4, marginTop: 2 }}>
-            다음 레벨까지 {caresNeeded}번 케어
-          </Text>
-        </View>
-
-        {/* 설정 버튼 */}
-        <TouchableOpacity
-          onPress={() => setViewMode('shop')}
-          style={{
-            width: 36, height: 36, borderRadius: 11, backgroundColor: T.paper,
-            borderWidth: 1, borderColor: T.rule2, alignItems: 'center', justifyContent: 'center',
-          }}>
-          <Settings size={16} color={T.ink3} />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── 방 (Room) ── */}
-      <View style={{ flex: 1, paddingHorizontal: 12, paddingBottom: 12 }}>
-        <View style={{
-          flex: 1, borderRadius: 28, overflow: 'hidden',
-          shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.10, shadowRadius: 12, elevation: 4,
-        }}>
-
-          {/* 벽 (Wall) — 오트밀 아이보리 벽지 */}
-          <View style={{ flex: 6, backgroundColor: '#f5f0e6', position: 'relative' }}>
-
-            {/* 벽지 세로 줄무늬 — 미세한 장식 */}
-            {[...Array(12)].map((_, i) => (
-              <View key={i} style={{
-                position: 'absolute', top: 0, bottom: 0,
-                left: `${(i / 12) * 100}%`, width: 1,
-                backgroundColor: 'rgba(180,165,140,0.12)',
-              }} />
-            ))}
-
-            {/* 벽 상단 몰딩 라인 */}
-            <View style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-              backgroundColor: '#e8e0d0',
-            }} />
-
-            {/* ── 선반 자리 (Placeholder) ── */}
-            <View style={{
-              position: 'absolute', top: '14%', left: '8%',
-              width: '30%', height: 52,
-              backgroundColor: 'rgba(210,195,170,0.35)',
-              borderRadius: 10, borderWidth: 1.5,
-              borderColor: 'rgba(180,160,130,0.4)',
-              borderStyle: 'dashed',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Text style={{ fontSize: 10, color: 'rgba(140,120,95,0.7)', fontWeight: '600' }}>선반</Text>
-            </View>
-
-            {/* ── 우측 액자 자리 (Placeholder) ── */}
-            <View style={{
-              position: 'absolute', top: '10%', right: '10%',
-              width: 52, height: 64,
-              backgroundColor: 'rgba(210,195,170,0.3)',
-              borderRadius: 8, borderWidth: 1.5,
-              borderColor: 'rgba(180,160,130,0.4)',
-              borderStyle: 'dashed',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Text style={{ fontSize: 9, color: 'rgba(140,120,95,0.7)', fontWeight: '600' }}>액자</Text>
-            </View>
-
-          </View>
-
-          {/* 벽-바닥 경계선 */}
-          <View style={{ height: 3, backgroundColor: '#d8c8b0' }} />
-
-          {/* 바닥 (Floor) — 따뜻한 베이지 */}
-          <View style={{ flex: 4, backgroundColor: '#e8dece', position: 'relative', alignItems: 'center' }}>
-
-            {/* 원형 러그 — 연한 연두색 */}
-            <View style={{
-              position: 'absolute',
-              top: '5%',
-              width: 200, height: 120,
-              borderRadius: 60,
-              backgroundColor: '#c8ddb8',
-              borderWidth: 3, borderColor: '#b5cc9f',
-              alignItems: 'center', justifyContent: 'flex-start',
-              overflow: 'visible',
-            }}>
-              {/* 러그 안쪽 테두리 장식 */}
-              <View style={{
-                position: 'absolute', top: 8, left: 10, right: 10, bottom: 8,
-                borderRadius: 52, borderWidth: 1.5,
-                borderColor: 'rgba(255,255,255,0.55)',
-              }} />
-
-              {/* ── 소파 자리 (Placeholder) ── */}
-              <View style={{
-                marginTop: 8,
-                width: '72%', height: 36,
-                backgroundColor: 'rgba(255,255,255,0.5)',
-                borderRadius: 10, borderWidth: 1.5,
-                borderColor: 'rgba(160,185,130,0.5)',
-                borderStyle: 'dashed',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Text style={{ fontSize: 10, color: 'rgba(100,130,80,0.8)', fontWeight: '600' }}>소파</Text>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: T.ink }}>{profile?.nickname || '나의 아보카도'}</Text>
+                <View style={{ backgroundColor: T.brownBg, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: T.warmBrown }}>Lv.{avocado.level}</Text>
+                </View>
+                <Text style={{ fontSize: 11, color: T.warmBrown, fontWeight: '600', marginLeft: 'auto' }}>{avocado.coins} 🪙</Text>
+              </View>
+              <View style={{ height: 4, backgroundColor: T.paper2, borderRadius: 2, overflow: 'hidden' }}>
+                <View style={{ width: `${nextLevelPercent}%`, height: '100%', backgroundColor: T.green, borderRadius: 2 }} />
               </View>
             </View>
-
-            {/* 캐릭터 — 러그 위 중앙 */}
-            <View style={{
-              position: 'absolute',
-              bottom: '22%',
-              alignItems: 'center',
+          </View>
+          {/* 물뿌리개 버튼 */}
+          <TouchableOpacity
+            onPress={() => {
+              if (wateringCanCount <= 0) { showToast('물뿌리개가 없어요. 상점에서 구매하세요! 🛍️'); return; }
+              setWateringCanCount(prev => prev - 1);
+              careAvocado(1);
+              triggerCharState('happy');
+              showToast('💧 아보카도에게 물을 줬어요!');
+            }}
+            style={{
+              alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6,
+              backgroundColor: wateringCanCount > 0 ? '#d0edca' : T.paper2,
+              borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7,
+              borderWidth: 1.5, borderColor: wateringCanCount > 0 ? '#7ab870' : T.rule2,
             }}>
-              <Text style={{ fontSize: 72 }}>{displayChar}</Text>
-            </View>
+            <Text style={{ fontSize: 18 }}>🪣</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: wateringCanCount > 0 ? '#4a7a40' : T.ink4 }}>
+              {wateringCanCount}개
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* 바닥 나무 결 라인 */}
-            {[...Array(5)].map((_, i) => (
-              <View key={i} style={{
-                position: 'absolute',
-                top: 0, bottom: 0,
-                left: `${(i / 5) * 100}%`, width: 1,
-                backgroundColor: 'rgba(160,135,100,0.08)',
-              }} />
+        {/* ── 우측 퀵버튼 ── */}
+        <View style={{ position: 'absolute', right: 18, top: '20%', gap: 8 }}>
+          {[
+            { emoji: '🛍️', onPress: () => setViewMode('shop'), bg: T.brownBg, border: T.warmBrown },
+            { emoji: '🎨', onPress: showDecorDrawer ? closeDrawer : openDrawer, bg: T.blueBg, border: T.blue },
+          ].map(({ emoji, onPress, bg, border }, i) => (
+            <TouchableOpacity
+              key={i}
+              onPress={onPress}
+              style={{
+                width: 44, height: 44, borderRadius: 14,
+                backgroundColor: bg, borderWidth: 1.5, borderColor: border,
+                alignItems: 'center', justifyContent: 'center',
+                shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+              }}>
+              <Text style={{ fontSize: 20 }}>{emoji}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+      </View>
+
+      {/* ── 꾸미기 서랍 (Decoration Drawer) ── */}
+      {showDecorDrawer && (
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)' }}
+          activeOpacity={1}
+          onPress={closeDrawer}
+        />
+      )}
+      {showDecorDrawer && (
+        <Animated.View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          backgroundColor: T.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+          paddingBottom: 20,
+          shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.12, shadowRadius: 16, elevation: 12,
+          transform: [{
+            translateY: drawerAnim.interpolate({ inputRange: [0, 1], outputRange: [340, 0] })
+          }],
+        }}>
+          {/* Handle bar */}
+          <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 6 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: T.rule2 }} />
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: T.ink }}>방 꾸미기</Text>
+            <TouchableOpacity onPress={closeDrawer}>
+              <X size={20} color={T.ink3} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Category tabs */}
+          <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 14 }}>
+            {decorTabs.map(t => (
+              <TouchableOpacity
+                key={t}
+                onPress={() => setDecorTab(t)}
+                style={{
+                  paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16,
+                  backgroundColor: decorTab === t ? T.brownBg : T.paper2,
+                  borderWidth: 1.5, borderColor: decorTab === t ? T.warmBrown : T.rule2,
+                }}>
+                <Text style={{ fontSize: 13, fontWeight: decorTab === t ? '700' : '500', color: decorTab === t ? T.warmBrown : T.ink3 }}>{t}</Text>
+              </TouchableOpacity>
             ))}
           </View>
 
-        </View>
-      </View>
+          {/* Item grid */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+            {decorItems.map(item => {
+              const isPlaced = placedItems.some(p => p.itemId === item.id);
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => addItemToRoom(item.id)}
+                  style={{
+                    width: 88, alignItems: 'center',
+                    backgroundColor: isPlaced ? T.greenBg : T.paper,
+                    borderRadius: 18, padding: 10,
+                    borderWidth: 1.5, borderColor: isPlaced ? T.greenBorder : T.rule2,
+                  }}>
+                  <View style={{ width: 64, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
+                    <RoomItemThumb itemId={item.id} />
+                  </View>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: T.ink, textAlign: 'center' }} numberOfLines={1}>{item.label}</Text>
+                  {isPlaced && (
+                    <View style={{ marginTop: 4, backgroundColor: '#7ab870', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 9, color: '#fff', fontWeight: '700' }}>배치됨</Text>
+                    </View>
+                  )}
+                  {!isPlaced && item.free && (
+                    <View style={{ marginTop: 4, backgroundColor: T.brownBg, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 9, color: T.warmBrown, fontWeight: '700' }}>무료</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-      {/* ── 우측 퀵버튼 (오버레이) ── */}
-      <View style={{
-        position: 'absolute', right: 20,
-        top: '22%',
-        gap: 8,
-      }}>
-        {[
-          { emoji: '🛍️', onPress: () => setViewMode('shop'), bg: T.brownBg, border: T.warmBrown },
-          { emoji: '🎨', onPress: () => {}, bg: T.blueBg, border: T.blue },
-          { emoji: '📝', onPress: () => {}, bg: T.greenBg, border: T.green },
-        ].map(({ emoji, onPress, bg, border }, i) => (
-          <TouchableOpacity
-            key={i}
-            onPress={onPress}
-            style={{
-              width: 42, height: 42, borderRadius: 13,
-              backgroundColor: bg, borderWidth: 1.5, borderColor: border,
-              alignItems: 'center', justifyContent: 'center',
-              shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
-            }}>
-            <Text style={{ fontSize: 18 }}>{emoji}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ── 하단 액션 버튼 ── */}
-      <View style={{
-        paddingHorizontal: 16, paddingBottom: 12, paddingTop: 6,
-        flexDirection: 'row', gap: 10,
-      }}>
-        <TouchableOpacity
-          onPress={() => setViewMode('shop')}
-          style={{
-            flex: 1, backgroundColor: T.warmBrown, borderRadius: 16, paddingVertical: 13,
-            alignItems: 'center',
-            shadowColor: T.warmBrown, shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.22, shadowRadius: 6, elevation: 3,
-          }}>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>상점 🛍️</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={{
-            flex: 1, backgroundColor: T.blue, borderRadius: 16, paddingVertical: 13,
-            alignItems: 'center',
-            shadowColor: T.blue, shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.18, shadowRadius: 6, elevation: 3,
-          }}>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>배경 🎨</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+            <Text style={{ fontSize: 11, color: T.ink4, textAlign: 'center' }}>아이템을 탭해서 방에 배치하세요 · 길게 눌러 제거</Text>
+          </View>
+        </Animated.View>
+      )}
 
     </View>
   );
